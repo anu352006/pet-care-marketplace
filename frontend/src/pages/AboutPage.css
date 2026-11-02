@@ -1,0 +1,129 @@
+.about-hero-card {
+  padding: 3.5rem 2.5rem;
+  text-align: center;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F5F8F4 100%);
+  margin-bottom: 3rem;
+  border-top: 4px solid var(--color-primary);
+}
+
+.about-title {
+  font-size: 2.8rem;
+  margin: 1rem 0;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.about-lead {
+  font-size: 1.15rem;
+  color: var(--color-text-muted);
+  max-width: 720px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  margin-bottom: 3.5rem;
+}
+
+.pillar-item {
+  padding: 2.25rem;
+}
+
+.pillar-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.pillar-item h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.pillar-item p {
+  color: var(--color-text-muted);
+  font-size: 0.925rem;
+  line-height: 1.6;
+}
+
+.academic-arch-card {
+  padding: 2.5rem;
+  margin-bottom: 3.5rem;
+  background: #FFFFFF;
+}
+
+.arch-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.arch-header h2 {
+  font-size: 1.8rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.arch-header p {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.arch-specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.75rem;
+}
+
+.arch-spec-item {
+  background: var(--color-bg);
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.arch-spec-item strong {
+  display: block;
+  font-size: 1.05rem;
+  color: var(--color-primary-dark);
+  margin-bottom: 0.4rem;
+}
+
+.arch-spec-item p {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.about-cta-strip {
+  padding: 3rem 0;
+}
+
+.about-cta-strip h3 {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+}
+
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 992px) {
+  .pillars-grid {
+    grid-template-columns: 1fr;
+  }
+  .arch-specs-grid {
+    grid-template-columns: 1fr;
+  }
+}

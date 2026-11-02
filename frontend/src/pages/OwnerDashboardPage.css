@@ -1,0 +1,377 @@
+.dashboard-welcome-banner {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F5F9F4 100%);
+  padding: 2.25rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  border-left: 5px solid var(--color-primary);
+}
+
+.welcome-content h1 {
+  font-size: 2.2rem;
+  margin: 0.5rem 0;
+}
+
+.welcome-content p {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  max-width: 600px;
+}
+
+.quick-action-btns {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.primary-pet-pill {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #FFFFFF;
+  padding: 0.85rem 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.primary-pet-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.primary-pet-pill strong {
+  display: block;
+  font-size: 1.1rem;
+  color: var(--color-primary-dark);
+}
+
+.primary-pet-pill span {
+  font-size: 0.825rem;
+  color: var(--color-text-muted);
+}
+
+/* Metric Counters */
+.stats-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.metric-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.metric-label {
+  display: block;
+  font-size: 0.825rem;
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.metric-val {
+  display: block;
+  font-size: 1.85rem;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  color: var(--color-primary-dark);
+}
+
+/* Two Columns */
+.dashboard-two-cols {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 2rem;
+}
+
+.dashboard-card {
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.header-with-icon h3 {
+  font-size: 1.25rem;
+}
+
+.header-subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.link-subtle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.appointment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 1.15rem;
+  background: var(--color-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+
+.appointment-item:hover {
+  border-color: var(--color-secondary-light);
+}
+
+.app-status-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 90px;
+}
+
+.app-booking-id {
+  font-size: 0.72rem;
+  font-family: monospace;
+  color: var(--color-text-light);
+}
+
+.app-main-details {
+  flex: 1;
+}
+
+.app-main-details h4 {
+  font-size: 1.05rem;
+  margin-bottom: 0.25rem;
+}
+
+.app-provider-line {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.app-meta-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  background: #FFFFFF;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  color: var(--color-text-main);
+}
+
+.app-price-box {
+  text-align: right;
+}
+
+.app-price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+/* AI Recommendations Section */
+.recs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.rec-mini-card {
+  display: flex;
+  gap: 0.85rem;
+  padding: 0.85rem;
+  background: var(--color-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.rec-img {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.rec-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.rec-cat {
+  font-size: 0.7rem;
+  color: var(--color-accent);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.rec-info h4 {
+  font-size: 0.875rem;
+  line-height: 1.3;
+  margin: 0.2rem 0 0.4rem 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rec-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.rec-price {
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: 0.95rem;
+}
+
+/* My Pets List */
+.dash-pets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.dash-pet-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--color-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.dash-pet-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.dash-pet-details h4 {
+  font-size: 1rem;
+  margin-bottom: 0.15rem;
+}
+
+.dash-pet-breed {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.dash-pet-vax {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.add-pet-cta-wrap .w-100 {
+  width: 100%;
+}
+
+/* AI Shortcut */
+.ai-shortcut-card {
+  background: linear-gradient(135deg, #1E3F20 0%, #2D5A27 100%);
+  color: #FFFFFF;
+  padding: 1.75rem;
+}
+
+.ai-shortcut-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.ai-shortcut-header h4 {
+  color: #FFFFFF;
+  font-size: 1.15rem;
+}
+
+.ai-shortcut-card p {
+  color: #D6E3D8;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 992px) {
+  .dashboard-welcome-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dashboard-two-cols {
+    grid-template-columns: 1fr;
+  }
+  .stats-metric-grid {
+    grid-template-columns: 1fr;
+  }
+  .recs-grid {
+    grid-template-columns: 1fr;
+  }
+}

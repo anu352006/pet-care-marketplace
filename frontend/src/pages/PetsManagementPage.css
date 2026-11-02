@@ -1,0 +1,224 @@
+.pets-header-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.pets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.75rem;
+}
+
+.pet-profile-card {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pet-card-media {
+  position: relative;
+  height: 220px;
+  width: 100%;
+}
+
+.pet-img-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pet-type-tag {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(30, 63, 32, 0.88);
+  backdrop-filter: blur(4px);
+  color: #FFFFFF;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+}
+
+.pet-card-details {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.pet-name-action-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.pet-display-name {
+  font-size: 1.35rem;
+  margin-bottom: 0.15rem;
+}
+
+.pet-breed-tag {
+  font-size: 0.825rem;
+  color: var(--color-text-muted);
+}
+
+.pet-action-btns {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.icon-action-btn {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--border-color);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.icon-action-btn:hover {
+  background: var(--color-secondary-subtle);
+  color: var(--color-primary);
+}
+
+.icon-action-btn.text-danger:hover {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: rgba(211, 47, 47, 0.3);
+}
+
+.pet-vitals-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--border-color);
+}
+
+.vital-item {
+  text-align: center;
+}
+
+.vital-lbl {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--color-text-light);
+  text-transform: uppercase;
+}
+
+.vital-item strong {
+  font-size: 0.85rem;
+  color: var(--color-primary-dark);
+}
+
+.pet-medical-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.medical-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+}
+
+.medical-line strong {
+  display: block;
+  color: var(--color-text-main);
+  margin-bottom: 0.15rem;
+}
+
+.medical-line p {
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+/* Modals */
+.pet-form-modal {
+  max-width: 600px;
+}
+
+.pet-modal-header {
+  margin-bottom: 1.5rem;
+}
+
+.pet-modal-header h2 {
+  font-size: 1.6rem;
+  margin-bottom: 0.25rem;
+}
+
+.pet-modal-header p {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.form-btn-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.confirmation-modal {
+  max-width: 440px;
+  text-align: center;
+}
+
+.confirm-icon-box {
+  margin-bottom: 1rem;
+}
+
+.confirmation-modal h3 {
+  font-size: 1.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.confirmation-modal p {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.confirm-btn-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.bg-danger {
+  background-color: var(--color-danger);
+}
+
+@media (max-width: 992px) {
+  .pets-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 650px) {
+  .pets-grid {
+    grid-template-columns: 1fr;
+  }
+}

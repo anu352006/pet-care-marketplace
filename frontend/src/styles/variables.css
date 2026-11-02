@@ -1,0 +1,65 @@
+:root {
+  /* Brand Color Palette */
+  --color-primary: #1E3F20;         /* Deep Forest Green */
+  --color-primary-light: #2D5A27;   /* Rich Emerald Green */
+  --color-primary-dark: #142B16;    /* Midnight Forest */
+  
+  --color-secondary: #4E7A58;       /* Sophisticated Sage Green */
+  --color-secondary-light: #88A788; /* Soft Sage */
+  --color-secondary-subtle: #EBF2EC;/* Pale Sage Tint */
+
+  --color-accent: #E07A5F;          /* Warm Terracotta / Muted Orange */
+  --color-accent-hover: #D4694D;    /* Deep Terracotta */
+  --color-accent-light: #FDF1ED;    /* Soft Peach / Cream Orange */
+  
+  --color-gold: #F4A261;            /* Warm Honey Gold for Stars & Ratings */
+
+  /* Surface & Neutral Colors */
+  --color-bg: #F8F9F5;              /* Soft Cream / Off-White Canvas */
+  --color-surface: #FFFFFF;         /* Crisp White Card Surface */
+  --color-surface-hover: #FCFDFB;   /* Card Hover Tint */
+  --color-surface-alt: #F1F4EE;     /* Subtle Muted Surface */
+  
+  /* Text Colors */
+  --color-text-main: #1C251D;       /* Deep Charcoal Charcoal-Green */
+  --color-text-muted: #5A695C;      /* Calming Muted Forest Grey */
+  --color-text-light: #8A9A8C;      /* Subdued Placeholder Text */
+  --color-text-inverse: #FFFFFF;    /* Pure White */
+
+  /* Borders & Dividers */
+  --border-color: #E2E8DF;          /* Light Herbal Border */
+  --border-color-focus: #2D5A27;    /* Focus Ring Green */
+
+  /* Feedback Colors */
+  --color-success: #2E7D32;
+  --color-success-bg: #E8F5E9;
+  --color-warning: #ED6C02;
+  --color-warning-bg: #FFF4E5;
+  --color-danger: #D32F2F;
+  --color-danger-bg: #FFEBEE;
+  --color-info: #0288D1;
+  --color-info-bg: #E1F5FE;
+
+  /* Typography */
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Elevations / Shadows */
+  --shadow-xs: 0 1px 2px rgba(28, 37, 29, 0.04);
+  --shadow-sm: 0 2px 6px rgba(28, 37, 29, 0.06);
+  --shadow-md: 0 6px 16px rgba(28, 37, 29, 0.08);
+  --shadow-lg: 0 12px 30px rgba(28, 37, 29, 0.10);
+  --shadow-xl: 0 20px 40px rgba(28, 37, 29, 0.13);
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease-in-out;
+  --transition-normal: 0.25s ease-in-out;
+  --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}

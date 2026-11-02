@@ -1,0 +1,226 @@
+.booking-modal {
+  max-width: 580px;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: var(--color-surface-alt);
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: all var(--transition-fast);
+}
+
+.modal-close-btn:hover {
+  background: var(--color-secondary-subtle);
+  color: var(--color-primary);
+}
+
+.booking-modal-header {
+  margin-bottom: 1.5rem;
+}
+
+.booking-modal-header h2 {
+  font-size: 1.65rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.booking-modal-header .subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.label-icon {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 0.4rem;
+}
+
+.pet-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.pet-picker-card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--color-surface);
+}
+
+.pet-picker-card:hover {
+  border-color: var(--color-secondary);
+  background: var(--color-surface-alt);
+}
+
+.pet-picker-card.active {
+  border-color: var(--color-primary);
+  background: var(--color-secondary-subtle);
+  box-shadow: 0 0 0 2px rgba(45, 90, 39, 0.2);
+}
+
+.pet-picker-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.pet-picker-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.pet-picker-info strong {
+  font-size: 0.85rem;
+  color: var(--color-primary-dark);
+}
+
+.pet-picker-info span {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.slots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.slot-chip {
+  padding: 0.5rem 0.85rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-main);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.slot-chip:hover:not(.disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.slot-chip.active {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  border-color: var(--color-primary);
+}
+
+.slot-chip.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: #E5E7EB;
+  text-decoration: line-through;
+}
+
+.booking-summary-strip {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.summary-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.summary-amount {
+  font-size: 1.45rem;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  color: var(--color-primary);
+}
+
+.summary-amount small {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+/* Success View */
+.booking-success-view {
+  text-align: center;
+  padding: 1.5rem 0.5rem;
+}
+
+.success-icon-wrap {
+  margin-bottom: 1rem;
+}
+
+.booking-success-view h2 {
+  font-size: 1.85rem;
+  color: var(--color-primary);
+  margin-bottom: 0.5rem;
+}
+
+.success-subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
+}
+
+.receipt-card {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.receipt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.9rem;
+}
+
+.receipt-row:last-child {
+  border-bottom: none;
+}
+
+.receipt-row span {
+  color: var(--color-text-muted);
+}
+
+.receipt-row strong {
+  color: var(--color-text-main);
+}
+
+.success-modal-actions {
+  display: flex;
+  justify-content: center;
+}
