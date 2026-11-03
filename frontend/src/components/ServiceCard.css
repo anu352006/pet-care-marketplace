@@ -1,22 +1,30 @@
+/* ==========================================================
+   SERVICE CARD - ELEVATED COMMERCIAL MARKETPLACE COMPONENT
+   ========================================================== */
+
 .service-card {
   display: flex;
   flex-direction: column;
   padding: 0;
   overflow: hidden;
   height: 100%;
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 
 .service-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-card-hover);
   border-color: var(--color-secondary-light);
 }
 
 .service-img-container {
   position: relative;
   width: 100%;
-  height: 200px;
+  height: 215px;
   overflow: hidden;
   background-color: var(--color-surface-alt);
 }
@@ -25,41 +33,51 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.4s ease;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .service-card:hover .service-card-img {
-  transform: scale(1.05);
+  transform: scale(1.07);
+}
+
+.service-img-vignette {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0) 50%);
+  pointer-events: none;
 }
 
 .category-pill-badge {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  background-color: rgba(30, 63, 32, 0.88);
-  backdrop-filter: blur(4px);
+  top: 14px;
+  left: 14px;
+  background-color: rgba(23, 56, 32, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: #FFFFFF;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.25rem 0.65rem;
+  padding: 0.3rem 0.75rem;
   border-radius: var(--radius-full);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .featured-pill-badge {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
   background-color: var(--color-accent);
   color: #FFFFFF;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.25rem 0.65rem;
+  padding: 0.3rem 0.75rem;
   border-radius: var(--radius-full);
+  box-shadow: 0 2px 8px var(--color-accent-glow);
 }
 
 .service-card-body {
-  padding: 1.35rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -69,14 +87,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.75rem;
 }
 
 .rating-pill {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.825rem;
+  gap: 0.3rem;
+  font-size: 0.85rem;
 }
 
 .star-fill {
@@ -85,25 +103,30 @@
 }
 
 .rating-score {
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-text-main);
 }
 
 .reviews-num {
   color: var(--color-text-light);
+  font-size: 0.8rem;
 }
 
 .duration-pill {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.78rem;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 500;
   color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
 }
 
 .service-card-title {
-  font-size: 1.15rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  margin-bottom: 0.55rem;
   line-height: 1.35;
 }
 
@@ -117,10 +140,10 @@
 }
 
 .service-card-desc {
-  font-size: 0.875rem;
+  font-size: 0.885rem;
   color: var(--color-text-muted);
-  line-height: 1.5;
-  margin-bottom: 1rem;
+  line-height: 1.55;
+  margin-bottom: 1.15rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -129,9 +152,9 @@
 
 .provider-info-strip {
   background-color: var(--color-bg);
-  border-radius: var(--radius-sm);
-  padding: 0.65rem 0.85rem;
-  margin-bottom: 1.25rem;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.95rem;
+  margin-bottom: 1.35rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -148,29 +171,41 @@
   color: var(--color-text-light);
   text-transform: uppercase;
   font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.provider-name-line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .provider-name {
-  font-size: 0.825rem;
+  font-size: 0.85rem;
   color: var(--color-text-main);
+}
+
+.verified-icon {
+  color: var(--color-success);
 }
 
 .provider-loc-box {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
+  text-align: right;
 }
 
 .service-card-footer {
   margin-top: auto;
-  padding-top: 1rem;
+  padding-top: 1.15rem;
   border-top: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
 .price-tag-wrap {
@@ -182,35 +217,38 @@
   font-size: 0.68rem;
   color: var(--color-text-light);
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .price-val {
   display: flex;
   align-items: baseline;
   line-height: 1;
+  margin: 1px 0;
 }
 
 .price-val .currency {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--color-primary);
   margin-right: 2px;
 }
 
 .price-val .amount {
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 800;
   font-family: var(--font-heading);
   color: var(--color-primary);
+  letter-spacing: -0.02em;
 }
 
 .price-unit {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--color-text-muted);
 }
 
 .card-btn-group {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }

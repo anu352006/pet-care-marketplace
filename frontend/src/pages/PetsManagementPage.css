@@ -1,8 +1,12 @@
+/* ==========================================================
+   PET PROFILE MANAGEMENT - ELEVATED CARDS & MODALS
+   ========================================================== */
+
 .pets-header-row {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 2.5rem;
+  margin-bottom: 3rem;
   flex-wrap: wrap;
   gap: 1.5rem;
 }
@@ -10,7 +14,7 @@
 .pets-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.75rem;
+  gap: 2rem;
 }
 
 .pet-profile-card {
@@ -18,11 +22,22 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: #FFFFFF;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+
+.pet-profile-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-secondary-light);
 }
 
 .pet-card-media {
   position: relative;
-  height: 220px;
+  height: 235px;
   width: 100%;
 }
 
@@ -30,23 +45,29 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pet-profile-card:hover .pet-img-cover {
+  transform: scale(1.06);
 }
 
 .pet-type-tag {
   position: absolute;
   top: 14px;
   right: 14px;
-  background: rgba(30, 63, 32, 0.88);
-  backdrop-filter: blur(4px);
+  background: rgba(23, 56, 32, 0.92);
+  backdrop-filter: blur(6px);
   color: #FFFFFF;
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.25rem 0.75rem;
+  padding: 0.3rem 0.8rem;
   border-radius: var(--radius-full);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .pet-card-details {
-  padding: 1.5rem;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -56,29 +77,30 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: 1.15rem;
 }
 
 .pet-display-name {
-  font-size: 1.35rem;
-  margin-bottom: 0.15rem;
+  font-size: 1.45rem;
+  margin-bottom: 0.2rem;
+  color: var(--color-primary-dark);
 }
 
 .pet-breed-tag {
-  font-size: 0.825rem;
+  font-size: 0.85rem;
   color: var(--color-text-muted);
 }
 
 .pet-action-btns {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.45rem;
 }
 
 .icon-action-btn {
   background: var(--color-surface-alt);
   border: 1px solid var(--border-color);
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -91,22 +113,23 @@
 .icon-action-btn:hover {
   background: var(--color-secondary-subtle);
   color: var(--color-primary);
+  border-color: var(--color-secondary);
 }
 
 .icon-action-btn.text-danger:hover {
   background: var(--color-danger-bg);
   color: var(--color-danger);
-  border-color: rgba(211, 47, 47, 0.3);
+  border-color: rgba(220, 38, 38, 0.3);
 }
 
 .pet-vitals-strip {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
+  gap: 0.65rem;
   background: var(--color-bg);
   border-radius: var(--radius-md);
-  padding: 0.75rem;
-  margin-bottom: 1.25rem;
+  padding: 0.85rem;
+  margin-bottom: 1.35rem;
   border: 1px solid var(--border-color);
 }
 
@@ -116,95 +139,98 @@
 
 .vital-lbl {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--color-text-light);
   text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
 }
 
 .vital-item strong {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--color-primary-dark);
 }
 
 .pet-medical-section {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.95rem;
   margin-top: auto;
-  padding-top: 1rem;
+  padding-top: 1.15rem;
   border-top: 1px solid var(--border-color);
 }
 
 .medical-line {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
-  font-size: 0.8rem;
+  gap: 0.7rem;
+  font-size: 0.825rem;
 }
 
 .medical-line strong {
   display: block;
   color: var(--color-text-main);
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.2rem;
 }
 
 .medical-line p {
   color: var(--color-text-muted);
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 /* Modals */
 .pet-form-modal {
-  max-width: 600px;
+  max-width: 620px;
 }
 
 .pet-modal-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 .pet-modal-header h2 {
-  font-size: 1.6rem;
-  margin-bottom: 0.25rem;
+  font-size: 1.75rem;
+  margin-bottom: 0.35rem;
 }
 
 .pet-modal-header p {
   color: var(--color-text-muted);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
 }
 
 .form-btn-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
+  gap: 0.85rem;
+  margin-top: 1.75rem;
+  padding-top: 1.35rem;
   border-top: 1px solid var(--border-color);
 }
 
 .confirmation-modal {
-  max-width: 440px;
+  max-width: 450px;
   text-align: center;
 }
 
 .confirm-icon-box {
-  margin-bottom: 1rem;
+  margin-bottom: 1.15rem;
 }
 
 .confirmation-modal h3 {
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   margin-bottom: 0.5rem;
 }
 
 .confirmation-modal p {
   color: var(--color-text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 1.5rem;
+  font-size: 0.925rem;
+  margin-bottom: 1.75rem;
 }
 
 .confirm-btn-row {
   display: flex;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
 .bg-danger {

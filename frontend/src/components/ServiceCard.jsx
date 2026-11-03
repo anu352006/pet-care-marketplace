@@ -1,20 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, MapPin, Clock, Calendar, CheckCircle, ArrowRight } from 'lucide-react';
+import { Star, MapPin, Clock, Calendar, CheckCircle, ArrowRight, ShieldCheck } from 'lucide-react';
 import './ServiceCard.css';
 
 const ServiceCard = ({ service, onBookNow }) => {
   return (
     <div className="service-card card">
-      {/* Service Image Banner */}
+      {/* Service Image Banner with Badge Overlay */}
       <div className="service-img-container">
         <img src={service.image} alt={service.name} className="service-card-img" />
+        <div className="service-img-vignette"></div>
         <span className="category-pill-badge">{service.categoryName}</span>
         {service.featured && <span className="featured-pill-badge">Popular Choice</span>}
       </div>
 
       <div className="service-card-body">
-        {/* Rating and Reviews */}
+        {/* Rating and Duration */}
         <div className="service-meta-top">
           <div className="rating-pill">
             <Star size={14} className="star-fill" />
@@ -35,11 +36,14 @@ const ServiceCard = ({ service, onBookNow }) => {
         {/* Short Description */}
         <p className="service-card-desc">{service.description}</p>
 
-        {/* Provider Details */}
+        {/* Provider Details Strip */}
         <div className="provider-info-strip">
           <div className="provider-name-box">
             <span className="provider-label">Provider</span>
-            <strong className="provider-name">{service.providerName}</strong>
+            <div className="provider-name-line">
+              <strong className="provider-name">{service.providerName}</strong>
+              <ShieldCheck size={14} className="verified-icon" title="Verified Specialist" />
+            </div>
           </div>
           <div className="provider-loc-box">
             <MapPin size={13} />
@@ -47,7 +51,7 @@ const ServiceCard = ({ service, onBookNow }) => {
           </div>
         </div>
 
-        {/* Price & Actions */}
+        {/* Price & Actions Footer */}
         <div className="service-card-footer">
           <div className="price-tag-wrap">
             <span className="price-from">Starting at</span>

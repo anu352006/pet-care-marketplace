@@ -1,65 +1,80 @@
 :root {
-  /* Brand Color Palette */
-  --color-primary: #1E3F20;         /* Deep Forest Green */
-  --color-primary-light: #2D5A27;   /* Rich Emerald Green */
-  --color-primary-dark: #142B16;    /* Midnight Forest */
+  /* ==========================================================
+     BRAND COLOR PALETTE - PREMIUM PET CARE STARTUP SYSTEM
+     ========================================================== */
   
-  --color-secondary: #4E7A58;       /* Sophisticated Sage Green */
-  --color-secondary-light: #88A788; /* Soft Sage */
-  --color-secondary-subtle: #EBF2EC;/* Pale Sage Tint */
+  /* Primary: Deep Forest Greens */
+  --color-primary: #173820;          /* Deep Regal Forest Green */
+  --color-primary-light: #24522F;    /* Rich Emerald Forest */
+  --color-primary-dark: #0D2113;     /* Midnight Pine */
+  --color-primary-glow: rgba(23, 56, 32, 0.12);
 
-  --color-accent: #E07A5F;          /* Warm Terracotta / Muted Orange */
-  --color-accent-hover: #D4694D;    /* Deep Terracotta */
-  --color-accent-light: #FDF1ED;    /* Soft Peach / Cream Orange */
-  
-  --color-gold: #F4A261;            /* Warm Honey Gold for Stars & Ratings */
+  /* Secondary: Soft Herbal Sage */
+  --color-secondary: #4A7352;        /* Sophisticated Sage */
+  --color-secondary-light: #82A589;  /* Soft Moss Sage */
+  --color-secondary-subtle: #EEF4EE; /* Gentle Herbal Mist */
+  --color-secondary-border: #D8E5D9; /* Subtle Herbal Border */
 
-  /* Surface & Neutral Colors */
-  --color-bg: #F8F9F5;              /* Soft Cream / Off-White Canvas */
-  --color-surface: #FFFFFF;         /* Crisp White Card Surface */
-  --color-surface-hover: #FCFDFB;   /* Card Hover Tint */
-  --color-surface-alt: #F1F4EE;     /* Subtle Muted Surface */
-  
-  /* Text Colors */
-  --color-text-main: #1C251D;       /* Deep Charcoal Charcoal-Green */
-  --color-text-muted: #5A695C;      /* Calming Muted Forest Grey */
-  --color-text-light: #8A9A8C;      /* Subdued Placeholder Text */
-  --color-text-inverse: #FFFFFF;    /* Pure White */
+  /* Accent: Warm Terracotta & Peach */
+  --color-accent: #E27350;           /* Warm Terracotta Coral */
+  --color-accent-hover: #D4613C;     /* Deep Clay Red */
+  --color-accent-light: #FDF2EE;     /* Soft Peach Blush */
+  --color-accent-glow: rgba(226, 115, 80, 0.18);
+
+  /* Warm Gold / Honey for Ratings */
+  --color-gold: #E5A93C;             /* Warm Artisan Gold */
+  --color-gold-light: #FFF8EB;
+
+  /* Surfaces & Canvas */
+  --color-bg: #FBFBFA;               /* Soft Artisan Cream White */
+  --color-surface: #FFFFFF;          /* Pure Card White */
+  --color-surface-hover: #F8FAF7;    /* Subtle Hover Highlight */
+  --color-surface-alt: #F3F5F1;      /* Light Neutral Surface */
+  --color-surface-sunken: #EBEFE8;   /* Sunken / Input Background */
+
+  /* Text & Contrast */
+  --color-text-main: #142017;        /* Ultra Deep Pine Charcoal */
+  --color-text-muted: #566759;       /* Balanced Readable Forest Grey */
+  --color-text-light: #8E9F91;       /* Subtle Metadata & Placeholders */
+  --color-text-inverse: #FFFFFF;     /* High Contrast White */
 
   /* Borders & Dividers */
-  --border-color: #E2E8DF;          /* Light Herbal Border */
-  --border-color-focus: #2D5A27;    /* Focus Ring Green */
+  --border-color: #E5EBE3;           /* Crisp Herbal Divider */
+  --border-color-focus: #24522F;     /* Focus Ring */
+  --border-light: rgba(23, 56, 32, 0.06);
 
-  /* Feedback Colors */
-  --color-success: #2E7D32;
-  --color-success-bg: #E8F5E9;
-  --color-warning: #ED6C02;
-  --color-warning-bg: #FFF4E5;
-  --color-danger: #D32F2F;
-  --color-danger-bg: #FFEBEE;
-  --color-info: #0288D1;
-  --color-info-bg: #E1F5FE;
+  /* System Feedback */
+  --color-success: #237A3B;
+  --color-success-bg: #EAF6ED;
+  --color-warning: #D97706;
+  --color-warning-bg: #FEF3C7;
+  --color-danger: #DC2626;
+  --color-danger-bg: #FEE2E2;
+  --color-info: #0284C7;
+  --color-info-bg: #E0F2FE;
 
   /* Typography */
-  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Outfit', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* Elevations / Shadows */
-  --shadow-xs: 0 1px 2px rgba(28, 37, 29, 0.04);
-  --shadow-sm: 0 2px 6px rgba(28, 37, 29, 0.06);
-  --shadow-md: 0 6px 16px rgba(28, 37, 29, 0.08);
-  --shadow-lg: 0 12px 30px rgba(28, 37, 29, 0.10);
-  --shadow-xl: 0 20px 40px rgba(28, 37, 29, 0.13);
+  /* Multi-Layered Natural Shadows (SaaS / Startup Grade) */
+  --shadow-xs: 0 1px 2px rgba(19, 46, 27, 0.03);
+  --shadow-sm: 0 2px 6px rgba(19, 46, 27, 0.04), 0 1px 2px rgba(19, 46, 27, 0.02);
+  --shadow-md: 0 6px 18px rgba(19, 46, 27, 0.06), 0 2px 6px rgba(19, 46, 27, 0.03);
+  --shadow-lg: 0 14px 34px rgba(19, 46, 27, 0.08), 0 4px 12px rgba(19, 46, 27, 0.04);
+  --shadow-xl: 0 22px 50px rgba(19, 46, 27, 0.12), 0 8px 20px rgba(19, 46, 27, 0.06);
+  --shadow-card-hover: 0 16px 36px rgba(23, 56, 32, 0.10), 0 4px 12px rgba(23, 56, 32, 0.04);
 
-  /* Border Radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  /* Border Radii */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
   --radius-full: 9999px;
 
-  /* Transitions */
-  --transition-fast: 0.15s ease-in-out;
-  --transition-normal: 0.25s ease-in-out;
-  --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Micro-Transitions */
+  --transition-fast: 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }

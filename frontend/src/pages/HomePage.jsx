@@ -14,10 +14,13 @@ import {
   ArrowRight, 
   Heart, 
   Star, 
-  CheckCircle, 
+  CheckCircle2, 
   Smile, 
   Users, 
-  PhoneCall 
+  PhoneCall,
+  Stethoscope,
+  Scissors,
+  Check
 } from 'lucide-react';
 import './HomePage.css';
 
@@ -46,69 +49,91 @@ const HomePage = () => {
     <div className="home-page">
       {/* 1. HERO SECTION */}
       <section className="hero-section">
+        {/* Subtle decorative background blur blurs */}
+        <div className="hero-bg-glow hero-glow-1"></div>
+        <div className="hero-bg-glow hero-glow-2"></div>
+
         <div className="container hero-container">
           <div className="hero-content">
             <div className="hero-pill-badge">
               <span className="dot-pulse"></span>
               <span>India's Most Trusted Pet Wellness Network</span>
             </div>
+
             <h1 className="hero-title">
               Everything Your Pet Needs, <span className="highlight-text">All in One Place.</span>
             </h1>
+
             <p className="hero-subtitle">
-              Connect with certified veterinarians, master groomers, luxury resort boarders, and behaviorists. Powered by intelligent AI pet care assistance for stress-free parenting.
+              Connect with background-verified veterinary clinics, master groomers, luxury resort boarders, and canine behaviorists. Powered by 24/7 intelligent AI wellness triage.
             </p>
 
-            {/* Quick Search & Location Filter */}
+            {/* Quick Search & Location Bar */}
             <form onSubmit={handleSearchSubmit} className="hero-search-bar">
-              <div className="search-input-group">
+              <div className="search-input-group city-select-group">
                 <MapPin size={18} className="search-icon" />
-                <select 
-                  className="search-select"
-                  value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                >
-                  {CITIES.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <div className="search-field-wrap">
+                  <span className="search-field-label">Location</span>
+                  <select 
+                    className="search-select"
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                  >
+                    {CITIES.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="search-divider"></div>
 
               <div className="search-input-group flex-2">
                 <Search size={18} className="search-icon" />
-                <input 
-                  type="text"
-                  placeholder="Find 'Grooming', 'Veterinarian', 'Puppy Training'..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  className="search-field"
-                />
+                <div className="search-field-wrap">
+                  <span className="search-field-label">Service or Specialty</span>
+                  <input 
+                    type="text"
+                    placeholder="E.g., Veterinary exam, grooming bath, puppy training..."
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    className="search-field"
+                  />
+                </div>
               </div>
 
               <button type="submit" className="btn btn-primary search-submit-btn">
-                <span>Explore Services</span>
-                <ArrowRight size={16} />
+                <span>Find Services</span>
+                <ArrowRight size={16} className="btn-arrow" />
               </button>
             </form>
 
-            {/* Social Trust Metrics */}
+            {/* Social Trust Metrics with Avatar Stack */}
             <div className="hero-trust-metrics">
-              <div className="trust-item">
-                <div className="trust-stars">
-                  <Star size={16} className="star-gold" />
-                  <Star size={16} className="star-gold" />
-                  <Star size={16} className="star-gold" />
-                  <Star size={16} className="star-gold" />
-                  <Star size={16} className="star-gold" />
-                </div>
-                <span><strong>4.9 / 5</strong> Rating (3,200+ Reviews)</span>
+              <div className="trust-avatars-stack">
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80" alt="Pet Parent" className="trust-avatar" />
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80" alt="Pet Parent" className="trust-avatar" />
+                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80" alt="Pet Parent" className="trust-avatar" />
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80" alt="Pet Parent" className="trust-avatar" />
               </div>
-              <div className="trust-divider"></div>
-              <div className="trust-item">
-                <ShieldCheck size={18} className="trust-shield" />
-                <span>100% Verified Pet Professionals</span>
+
+              <div className="trust-rating-block">
+                <div className="trust-stars">
+                  <Star size={15} className="star-gold" />
+                  <Star size={15} className="star-gold" />
+                  <Star size={15} className="star-gold" />
+                  <Star size={15} className="star-gold" />
+                  <Star size={15} className="star-gold" />
+                  <strong className="trust-score">4.9/5</strong>
+                </div>
+                <span className="trust-caption">Over <strong>3,200+ happy pets</strong> served</span>
+              </div>
+
+              <div className="trust-divider-vertical"></div>
+
+              <div className="trust-verified-pill">
+                <ShieldCheck size={18} className="trust-shield-icon" />
+                <span>100% Verified Specialists</span>
               </div>
             </div>
           </div>
@@ -121,19 +146,25 @@ const HomePage = () => {
                 alt="Happy playful dog and kitten in green field" 
                 className="hero-main-img" 
               />
+              
               {/* Floating Hero Badges */}
               <div className="floating-badge top-right">
-                <Sparkles size={20} className="text-accent" />
+                <div className="badge-icon-wrap bg-terracotta">
+                  <Sparkles size={18} />
+                </div>
                 <div>
                   <strong>AI Pet Assistant</strong>
                   <small>Instant diet & health advice</small>
                 </div>
               </div>
+
               <div className="floating-badge bottom-left">
-                <Award size={20} className="text-primary" />
+                <div className="badge-icon-wrap bg-sage">
+                  <ShieldCheck size={18} />
+                </div>
                 <div>
-                  <strong>Vetted Specialists</strong>
-                  <small>Background-checked pros</small>
+                  <strong>Certified Doctors</strong>
+                  <small>Registered clinical vet pros</small>
                 </div>
               </div>
             </div>
@@ -145,10 +176,10 @@ const HomePage = () => {
       <section className="section categories-section">
         <div className="container">
           <div className="section-header">
-            <span className="section-tag">Explore Offerings</span>
+            <span className="section-tag">Explore Specialties</span>
             <h2 className="section-title">Popular Pet Care Categories</h2>
             <p className="section-subtitle">
-              From routine check-ups and luxurious spa treatments to daily exercise and specialized behavioral training.
+              From routine clinical exams and luxurious coat spas to daily fitness walks and compassionate in-home pet sitting.
             </p>
           </div>
 
@@ -162,12 +193,13 @@ const HomePage = () => {
                 <div className="cat-img-box">
                   <img src={cat.image} alt={cat.name} className="cat-thumbnail" />
                   <span className="cat-count-pill">{cat.count}</span>
+                  <div className="cat-overlay"></div>
                 </div>
                 <div className="cat-info">
                   <h3 className="cat-title">{cat.name}</h3>
                   <p className="cat-desc">{cat.description}</p>
                   <span className="cat-link-text">
-                    Browse Services <ArrowRight size={14} />
+                    Browse Services <ArrowRight size={14} className="cat-arrow" />
                   </span>
                 </div>
               </Link>
@@ -184,7 +216,7 @@ const HomePage = () => {
               <span className="section-tag">Handpicked Specialists</span>
               <h2 className="section-title">Top-Rated Services Near You</h2>
               <p className="section-subtitle">
-                Book appointments directly with verified clinics, stylists, and boarding resorts.
+                Reserve real-time appointment slots with certified clinics, stylists, and boarding resorts.
               </p>
             </div>
             <Link to="/services" className="btn btn-outline view-all-btn">
@@ -211,25 +243,25 @@ const HomePage = () => {
           <div className="ai-promo-content">
             <div className="ai-tag">
               <Sparkles size={16} />
-              <span>AI-Powered Wellness Partner</span>
+              <span>AI-Powered Wellness Triage</span>
             </div>
             <h2>Meet Your 24/7 AI Pet Care Assistant</h2>
             <p>
-              Got questions about sudden puppy hiccups, nutrition swaps, grooming maintenance, or post-vaccine rest? Chat with our intelligent assistant trained on safe, veterinary-approved care guidelines.
+              Got questions about sudden food allergies, puppy teething, coat grooming frequency, or core vaccine timelines? Chat with our intelligent assistant calibrated with strict veterinary safety guardrails.
             </p>
 
             <div className="ai-feature-checklist">
               <div className="check-item">
-                <CheckCircle size={18} className="check-icon" />
-                <span>Personalized advice using your pet's breed, age & weight</span>
+                <div className="check-circle-icon"><Check size={14} /></div>
+                <span>Personalized guidance using your pet's breed, age & weight</span>
               </div>
               <div className="check-item">
-                <CheckCircle size={18} className="check-icon" />
-                <span>Nutrition & diet guidance for sensitive stomachs</span>
+                <div className="check-circle-icon"><Check size={14} /></div>
+                <span>Nutrition & diet advice for sensitive stomachs</span>
               </div>
               <div className="check-item">
-                <CheckCircle size={18} className="check-icon" />
-                <span>Urgent symptom triage with instant clinic recommendations</span>
+                <div className="check-circle-icon"><Check size={14} /></div>
+                <span>Emergency symptom triage with instant emergency clinic referrals</span>
               </div>
             </div>
 
@@ -238,19 +270,29 @@ const HomePage = () => {
                 <Sparkles size={18} />
                 Try AI Assistant Now
               </Link>
-              <span className="ai-free-badge">100% Free for Pet Parents</span>
+              <span className="ai-free-badge">✓ 100% Free for Pet Parents</span>
             </div>
           </div>
 
-          <div className="ai-promo-mockup">
-            <div className="chat-bubble user-bubble">
-              "My 3-year-old Golden Retriever Bruno suddenly skipped breakfast. Should I be worried?"
-            </div>
-            <div className="chat-bubble ai-bubble">
-              <div className="ai-bubble-sender">
-                <Sparkles size={14} /> PetCare Assistant
+          <div className="ai-promo-mockup card">
+            <div className="mockup-header">
+              <div className="mockup-header-title">
+                <Sparkles size={16} className="text-accent" />
+                <strong>PetCare Assistant</strong>
               </div>
-              "For an adult Golden like Bruno, a single skipped meal isn't uncommon if he remains energetic and hydrated. Check if he drank fresh water and has normal stool. If lethargy, vomiting, or pale gums appear, consult a vet promptly."
+              <span className="mockup-status-dot">Online</span>
+            </div>
+
+            <div className="mockup-chat-stream">
+              <div className="chat-bubble user-bubble">
+                "My 3-year-old Golden Retriever Bruno suddenly skipped his morning breakfast. Should I worry?"
+              </div>
+              <div className="chat-bubble ai-bubble">
+                <div className="ai-bubble-sender">
+                  <Sparkles size={14} /> PetCare Clinical Triage
+                </div>
+                "For an adult Golden Retriever like Bruno, a single skipped meal isn't alarming if he remains energetic and hydrated. Check if he drank fresh water and has normal gums. If lethargy, vomiting, or breathing distress appear, consult a licensed vet immediately."
+              </div>
             </div>
           </div>
         </div>
@@ -260,10 +302,10 @@ const HomePage = () => {
       <section className="section how-it-works-section">
         <div className="container">
           <div className="section-header">
-            <span className="section-tag">Simple 3-Step Process</span>
+            <span className="section-tag">Seamless Booking Flow</span>
             <h2 className="section-title">How PetCare Works</h2>
             <p className="section-subtitle">
-              We make scheduling high-touch pet wellness services effortless and transparent.
+              We make scheduling verified pet wellness services transparent, conflict-free, and effortless.
             </p>
           </div>
 
@@ -280,7 +322,7 @@ const HomePage = () => {
               <div className="step-number-wrap">02</div>
               <h3>Select Pet & Schedule</h3>
               <p>
-                Choose your pet's profile, pick an available real-time appointment slot, and leave custom care notes.
+                Choose your companion's profile, pick an available real-time appointment slot, and leave custom clinical notes.
               </p>
             </div>
 
@@ -306,7 +348,7 @@ const HomePage = () => {
           <div className="features-quad-grid">
             <div className="feature-item card">
               <div className="feature-icon-box bg-sage">
-                <ShieldCheck size={28} />
+                <ShieldCheck size={26} />
               </div>
               <h4>Rigorous Specialist Vetting</h4>
               <p>Every veterinary license, grooming certificate, and boarding facility is thoroughly vetted by our compliance team.</p>
@@ -314,7 +356,7 @@ const HomePage = () => {
 
             <div className="feature-item card">
               <div className="feature-icon-box bg-terracotta">
-                <Clock size={28} />
+                <Clock size={26} />
               </div>
               <h4>Zero Conflicting Slots</h4>
               <p>Real-time slot reservation guarantees no overbooking and minimal waiting times at clinics and salons.</p>
@@ -322,7 +364,7 @@ const HomePage = () => {
 
             <div className="feature-item card">
               <div className="feature-icon-box bg-sage">
-                <Sparkles size={28} />
+                <Sparkles size={26} />
               </div>
               <h4>AI-Powered Health Triage</h4>
               <p>Smart pre-consultation summaries help identify symptoms early and match you to the right specialty provider.</p>
@@ -330,7 +372,7 @@ const HomePage = () => {
 
             <div className="feature-item card">
               <div className="feature-icon-box bg-terracotta">
-                <PhoneCall size={28} />
+                <PhoneCall size={26} />
               </div>
               <h4>Emergency Pet Taxi Support</h4>
               <p>Access prioritized transport equipped with oxygen and animal stretchers for urgent clinic transfers.</p>
@@ -343,7 +385,7 @@ const HomePage = () => {
       <section className="section testimonials-section">
         <div className="container">
           <div className="section-header">
-            <span className="section-tag">Stories of Joy</span>
+            <span className="section-tag">Verified Stories</span>
             <h2 className="section-title">Loved by Pets, Trusted by Owners</h2>
           </div>
 
@@ -362,7 +404,7 @@ const HomePage = () => {
                   </div>
                   <div>
                     <strong>{rev.userName}</strong>
-                    <span>{rev.userCity} • Used {rev.providerName}</span>
+                    <span>{rev.userCity} • Booked with {rev.providerName}</span>
                   </div>
                 </div>
               </div>
@@ -376,7 +418,7 @@ const HomePage = () => {
         <div className="container cta-container card">
           <div className="cta-content">
             <h2>Ready to give your furry companion the royal care they deserve?</h2>
-            <p>Join thousands of loving pet owners across Bengaluru, Mumbai, Delhi NCR, and Hyderabad.</p>
+            <p>Join thousands of loving pet parents across Bengaluru, Mumbai, Delhi NCR, and Hyderabad.</p>
             <div className="cta-btn-wrap">
               <Link to="/services" className="btn btn-accent btn-lg">
                 Explore All Services
