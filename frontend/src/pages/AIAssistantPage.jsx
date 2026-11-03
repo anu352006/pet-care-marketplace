@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
 import { useAuth } from '../context/AuthContext';
+import { askAiAssistant } from '../services/aiService';
 import { 
   Sparkles, 
   Send, 
@@ -22,7 +23,7 @@ const AIAssistantPage = () => {
 
   // Selected pet context for personalization
   const [selectedPetId, setSelectedPetId] = useState(pets.length > 0 ? pets[0].id : '');
-  const activePet = pets.find(p => p.id === Number(selectedPetId)) || pets[0];
+  const activePet = pets.find(p => String(p.id) === String(selectedPetId)) || pets[0];
 
   // Chat message stream
   const [messages, setMessages] = useState([
@@ -95,7 +96,7 @@ const AIAssistantPage = () => {
     return `🐾 **PetCare Wellness Assistant Note for ${petName}**:\n\nThank you for asking about "${query}". As a general care guideline for a ${pet?.age || 2}-year-old ${petBreed}, consistency in routine, balanced premium nutrition, and mental enrichment through interactive play are the pillars of longevity.\n\n*Note: This advice is for wellness guidance and educational purposes. If ${petName} is showing abnormal behavior, lethargy, or discomfort, we recommend scheduling an exam with Dr. Aarav Sharma or one of our verified clinic specialists.*`;
   };
 
-  const handleSendMessage = (textToSend) => {
+  const handleSendMessage = async (textToSend) => {
     const query = textToSend || inputQuestion;
     if (!query.trim()) return;
 
@@ -111,9 +112,12 @@ const AIAssistantPage = () => {
     setInputQuestion('');
     setIsTyping(true);
 
-    // Simulate AI reasoning and streaming delay
-    setTimeout(() => {
-      const replyText = generateAssistantResponse(query, activePet);
+    try {
+      const replyText = await askAiAssistant({
+        question: query,
+        pet: activePet,
+        userId: user?.id
+      });
       const botMsg = {
         id: Date.now() + 1,
         sender: 'bot',
@@ -121,8 +125,18 @@ const AIAssistantPage = () => {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
+    } catch (err) {
+      console.error('AI assistant communication error:', err);
+      const botMsg = {
+        id: Date.now() + 1,
+        sender: 'bot',
+        text: generateAssistantResponse(query, activePet),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, botMsg]);
+    } finally {
       setIsTyping(false);
-    }, 900);
+    }
   };
 
   const handleFormSubmit = (e) => {

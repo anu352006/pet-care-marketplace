@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useMarketplace } from '../context/MarketplaceContext';
+import { isSupabaseConfigured } from '../services/supabaseClient';
 import { 
   Heart, 
   Menu, 
@@ -14,7 +15,8 @@ import {
   Bell, 
   ChevronDown,
   Layers,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Database
 } from 'lucide-react';
 import './Navbar.css';
 
@@ -48,8 +50,8 @@ const Navbar = () => {
       <div className="demo-top-bar">
         <div className="container demo-top-bar-content">
           <div className="demo-role-badge">
-            <span className="demo-dot"></span>
-            <strong>Academic Demo Mode:</strong> Viewing as <span className="active-role-text">{user ? user.role.replace('_', ' ') : 'Guest'}</span>
+            <span className="demo-dot" style={{ backgroundColor: isSupabaseConfigured() ? '#3ECF8E' : 'var(--color-primary)' }}></span>
+            <strong>{isSupabaseConfigured() ? 'Supabase Backend:' : 'Academic Demo:'}</strong> Viewing as <span className="active-role-text">{user ? (user.role || 'PET_OWNER').replace('_', ' ') : 'Guest'}</span>
           </div>
           <div className="demo-switch-actions">
             <span className="demo-switch-label">Switch Role:</span>

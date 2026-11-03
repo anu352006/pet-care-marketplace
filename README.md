@@ -22,10 +22,11 @@ The application features:
 
 | Layer | Technologies Used |
 | :--- | :--- |
-| **Frontend** | React 18, Vite, React Router v6, Axios, Lucide Icons, Modern Responsive CSS3 |
-| **Backend** | Java 21, Spring Boot 3.3, Spring Web, Spring Data JPA, Hibernate, Spring Security, JWT (JJWT) |
-| **Database** | MySQL 8.0 (InnoDB, Relational Schema, Multi-column Unique Constraints) |
-| **AI Integration** | External AI API integration with intelligent safe clinical fallback demo engine |
+| **Frontend** | React 18, Vite, React Router v6, @supabase/supabase-js, Lucide Icons, Modern Responsive CSS3 |
+| **Backend & Cloud** | **Supabase** (PostgreSQL 15, Supabase Auth / JWT, Storage, Edge Functions, Row Level Security) *(Legacy Spring Boot 3 & MySQL preserved in `/backend` and `/database`)* |
+| **Database** | Supabase PostgreSQL with 9 Relational Tables, Custom ENUMs, Triggers, and RLS Policies |
+| **File Storage** | Supabase Storage (`pet-images`, `provider-images`, `service-images`) |
+| **AI Integration** | Supabase Edge Function (`ai-assistant`) securely routing to external LLMs with clinical triage guardrails |
 | **Design System** | Forest Green (`#1E3F20`), Sage Green (`#4E7A58`), Warm Terracotta (`#E07A5F`), Off-White Canvas (`#F8F9F5`) |
 
 ---
@@ -38,26 +39,32 @@ pet-care-marketplace/
 ├── frontend/                     # React + Vite Single Page Application
 │   ├── public/                   # Static assets & SVG icons
 │   ├── src/
-│   │   ├── assets/               # Branding assets
 │   │   ├── components/           # Reusable components (ServiceCard, BookingModal, ScrollToTop)
-│   │   ├── context/              # AuthContext & MarketplaceContext
+│   │   ├── context/              # AuthContext (Supabase Auth) & MarketplaceContext (PostgreSQL CRUD)
 │   │   ├── layouts/              # Navbar (with 1-click Role Switcher) & Footer
 │   │   ├── pages/                # Home, Services, Detail, Dashboards, AI Assistant, Auth
-│   │   ├── services/             # Mock datasets & REST API client connectors
+│   │   ├── services/             # supabaseClient.js, aiService.js, mockData.js fallback
 │   │   ├── styles/               # Design tokens (variables.css) & global stylesheets
 │   │   ├── App.jsx               # Client-side router configuration
 │   │   └── main.jsx              # React DOM entrypoint
-│   ├── package.json              # Frontend scripts & dependencies
-│   └── vite.config.js            # Vite configuration with proxy to Spring Boot
+│   ├── .env.example              # Supabase URL & Anon Key template
+│   └── package.json              # Frontend scripts & dependencies
 │
-├── backend/                      # Java 21 + Spring Boot 3 Layered Backend
-│   ├── src/main/java/com/petcare/marketplace/
-│   │   ├── config/               # SecurityConfig, CORS settings, Beans
-│   │   ├── controller/           # REST Controllers (Auth, Pets, Services, Bookings, AI, Admin)
-│   │   ├── dto/                  # Data Transfer Objects (AuthRequest, BookingRequest, AiChat)
-│   │   ├── entity/               # JPA Entities (User, Provider, Pet, ServiceListing, Booking, Review)
-│   │   ├── exception/            # GlobalExceptionHandler with standardized JSON responses
-│   │   ├── repository/           # Spring Data JPA Repositories
+├── supabase/                     # Complete Supabase Backend Artifacts
+│   ├── schema.sql                # 9 relational tables, ENUMs, triggers, and RLS policies
+│   ├── storage.sql               # Storage bucket creation and access policies
+│   ├── seed.sql                  # Seed data for Indian cities, providers, services, pets
+│   └── functions/
+│       └── ai-assistant/         # Deno TypeScript Edge Function for secure AI & triage
+│
+├── docs/                         # Architecture & Setup Documentation
+│   ├── supabase-setup.md         # Comprehensive Supabase implementation guide
+│   ├── api-documentation.md      # API contracts & schema references
+│   └── project-documentation.md  # Master's program technical overview
+│
+├── backend/                      # Reference Java Spring Boot layered backend
+└── database/                     # Reference MySQL Workbench schema
+```
 │   │   ├── security/             # JwtUtils, JwtAuthFilter, UserDetailsServiceImpl
 │   │   ├── service/              # Core business services & AI clinical triage logic
 │   │   └── PetCareMarketplaceApplication.java

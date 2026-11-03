@@ -26,7 +26,7 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
   // Available slots for this service
   const slots = service.availableSlots || ['09:30 AM', '11:00 AM', '02:30 PM', '04:30 PM'];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -45,17 +45,17 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
       return;
     }
 
-    const petObj = pets.find(p => p.id === Number(selectedPetId));
+    const petObj = pets.find(p => String(p.id) === String(selectedPetId));
 
     try {
-      const created = createBooking({
+      const created = await createBooking({
         serviceId: service.id,
         serviceName: service.name,
         category: service.category,
         providerId: service.providerId,
         providerName: service.providerName,
         businessName: service.businessName,
-        petId: Number(selectedPetId),
+        petId: selectedPetId,
         petName: `${petObj?.name || 'Pet'} (${petObj?.breed || 'Companion'})`,
         date: bookingDate,
         timeSlot: selectedTimeSlot,
@@ -66,7 +66,7 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
       setConfirmedBooking(created);
       if (onBookingSuccess) onBookingSuccess(created);
     } catch (err) {
-      setErrorMsg(err.message);
+      setErrorMsg(err.message || 'Failed to complete booking.');
     }
   };
 
@@ -106,7 +106,7 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
                     {pets.map(p => (
                       <div 
                         key={p.id}
-                        className={`pet-picker-card ${Number(selectedPetId) === p.id ? 'active' : ''}`}
+                        className={`pet-picker-card ${String(selectedPetId) === String(p.id) ? 'active' : ''}`}
                         onClick={() => setSelectedPetId(p.id)}
                       >
                         <img src={p.photo} alt={p.name} className="pet-picker-img" />

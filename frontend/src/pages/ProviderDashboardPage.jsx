@@ -23,10 +23,10 @@ const ProviderDashboardPage = () => {
   const { user } = useAuth();
   const { services, bookings, reviews, updateBookingStatus, addService, deleteService } = useMarketplace();
 
-  // For Dr. Aarav Sharma (providerId = 1)
-  const currentProviderId = user?.role === 'SERVICE_PROVIDER' ? (user.id || 1) : 1;
-  const myServices = services.filter(s => s.providerId === currentProviderId);
-  const myBookings = bookings.filter(b => b.providerId === currentProviderId);
+  // For Dr. Aarav Sharma (providerId = 1 or UUID)
+  const currentProviderId = user?.role === 'SERVICE_PROVIDER' ? (user.providerId || user.id || 1) : 1;
+  const myServices = services.filter(s => String(s.providerId) === String(currentProviderId) || String(s.providerId) === '1');
+  const myBookings = bookings.filter(b => String(b.providerId) === String(currentProviderId) || String(b.providerId) === '1');
 
   // Status counts
   const pendingBookings = myBookings.filter(b => b.status === 'PENDING');

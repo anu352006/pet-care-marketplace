@@ -23,8 +23,8 @@ const ServiceDetailPage = () => {
   const { services, providers, reviews, addReview } = useMarketplace();
   const { user } = useAuth();
 
-  const service = services.find(s => s.id === Number(id)) || services[0];
-  const provider = providers.find(p => p.id === service?.providerId) || providers[0];
+  const service = services.find(s => String(s.id) === String(id)) || services[0];
+  const provider = providers.find(p => String(p.id) === String(service?.providerId)) || providers[0];
 
   // Reviews for this service
   const serviceReviews = reviews.filter(r => r.serviceName === service?.name || r.providerName === service?.providerName);

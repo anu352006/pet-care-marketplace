@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
+import { uploadStorageFile } from '../services/supabaseClient';
 import { 
   Heart, 
   Plus, 
@@ -12,7 +13,8 @@ import {
   AlertTriangle,
   Scale,
   Calendar,
-  Sparkles
+  Sparkles,
+  Upload
 } from 'lucide-react';
 import './PetsManagementPage.css';
 
@@ -34,6 +36,7 @@ const PetsManagementPage = () => {
   const [photo, setPhoto] = useState('');
   const [vaccinations, setVaccinations] = useState('');
   const [medicalHistory, setMedicalHistory] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const openAddModal = () => {
     setEditingPet(null);
@@ -63,7 +66,21 @@ const PetsManagementPage = () => {
     setShowModal(true);
   };
 
-  const handleSave = (e) => {
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploadingPhoto(true);
+      const uploadedUrl = await uploadStorageFile('pet-images', file, 'pets');
+      setPhoto(uploadedUrl);
+    } catch (err) {
+      console.warn('Storage upload error:', err);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleSave = async (e) => {
     e.preventDefault();
     const petPayload = {
       name,
@@ -80,16 +97,16 @@ const PetsManagementPage = () => {
     };
 
     if (editingPet) {
-      updatePet(editingPet.id, petPayload);
+      await updatePet(editingPet.id, petPayload);
     } else {
-      addPet(petPayload);
+      await addPet(petPayload);
     }
 
     setShowModal(false);
   };
 
-  const handleDelete = (id) => {
-    deletePet(id);
+  const handleDelete = async (id) => {
+    await deletePet(id);
     setDeleteConfirmId(null);
   };
 
@@ -297,15 +314,29 @@ const PetsManagementPage = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Photograph Image URL (Optional)</label>
+                  <label className="form-label">Pet Photograph (Upload to Supabase Storage or Paste URL)</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Upload size={15} />
+                      <span>{uploadingPhoto ? 'Uploading to Bucket...' : 'Upload Image File'}</span>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        style={{ display: 'none' }}
+                        onChange={handleFileUpload}
+                        disabled={uploadingPhoto}
+                      />
+                    </label>
+                    {photo && <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)', alignSelf: 'center' }}>✓ Image Selected</span>}
+                  </div>
                   <input 
                     type="url" 
                     className="form-control"
-                    placeholder="https://images.unsplash.com/..."
+                    placeholder="Or enter image URL: https://images.unsplash.com/..."
                     value={photo}
                     onChange={e => setPhoto(e.target.value)}
                   />
-                  <small className="form-text-hint">Leave blank to use a friendly default avatar.</small>
+                  <small className="form-text-hint">Leave blank to use an adorable automatic default photo.</small>
                 </div>
 
                 <div className="form-group">

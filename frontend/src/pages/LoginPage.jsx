@@ -13,7 +13,9 @@ const LoginPage = () => {
   const [role, setRole] = useState('PET_OWNER'); // 'PET_OWNER' | 'SERVICE_PROVIDER' | 'ADMIN'
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -22,11 +24,20 @@ const LoginPage = () => {
       return;
     }
 
-    const res = login(email, password, role);
-    if (res.success) {
-      if (res.user.role === 'ADMIN') navigate('/admin');
-      else if (res.user.role === 'SERVICE_PROVIDER') navigate('/provider-dashboard');
-      else navigate('/owner-dashboard');
+    setSubmitting(true);
+    try {
+      const res = await login(email, password, role);
+      if (res.success) {
+        if (res.user.role === 'ADMIN') navigate('/admin');
+        else if (res.user.role === 'SERVICE_PROVIDER') navigate('/provider-dashboard');
+        else navigate('/owner-dashboard');
+      } else {
+        setErrorMsg(res.error || 'Invalid credentials or user not found.');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'An error occurred during login.');
+    } finally {
+      setSubmitting(false);
     }
   };
 

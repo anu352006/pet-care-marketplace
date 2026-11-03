@@ -20,7 +20,9 @@ const RegisterPage = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -40,23 +42,32 @@ const RegisterPage = () => {
       return;
     }
 
-    // Role is strictly restricted to PET_OWNER or SERVICE_PROVIDER (No ADMIN self-registration)
-    const result = register({
-      name,
-      email,
-      phone,
-      password,
-      role: role === 'SERVICE_PROVIDER' ? 'SERVICE_PROVIDER' : 'PET_OWNER',
-      businessName: role === 'SERVICE_PROVIDER' ? businessName : '',
-      city
-    });
+    setSubmitting(true);
+    try {
+      // Role is strictly restricted to PET_OWNER or SERVICE_PROVIDER (No ADMIN self-registration)
+      const result = await register({
+        name,
+        email,
+        phone,
+        password,
+        role: role === 'SERVICE_PROVIDER' ? 'SERVICE_PROVIDER' : 'PET_OWNER',
+        businessName: role === 'SERVICE_PROVIDER' ? businessName : '',
+        city
+      });
 
-    if (result.success) {
-      setSuccessMsg('Account registered successfully! Redirecting to your dashboard...');
-      setTimeout(() => {
-        if (role === 'SERVICE_PROVIDER') navigate('/provider-dashboard');
-        else navigate('/owner-dashboard');
-      }, 1500);
+      if (result.success) {
+        setSuccessMsg('Account registered successfully! Redirecting to your dashboard...');
+        setTimeout(() => {
+          if (role === 'SERVICE_PROVIDER') navigate('/provider-dashboard');
+          else navigate('/owner-dashboard');
+        }, 1200);
+      } else {
+        setErrorMsg(result.error || 'Failed to create account. Please check your details.');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'An unexpected error occurred.');
+    } finally {
+      setSubmitting(false);
     }
   };
 

@@ -1,21 +1,36 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import './Auth.css';
 
 const ForgotPasswordPage = () => {
+  const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) {
       setErrorMsg('Please enter your registered email address.');
       return;
     }
     setErrorMsg('');
-    setSubmitted(true);
+    setLoading(true);
+    try {
+      const res = await resetPassword(email);
+      if (res && res.success === false) {
+        setErrorMsg(res.error || 'Failed to send recovery link.');
+      } else {
+        setSubmitted(true);
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Error communicating with authentication server.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
