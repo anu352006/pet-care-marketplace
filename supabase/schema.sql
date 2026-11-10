@@ -187,33 +187,105 @@ DECLARE
     user_phone TEXT;
     business_title TEXT;
     user_location TEXT;
+    clean_email TEXT;
 BEGIN
-    -- Determine role from metadata (case-insensitive, default pet_owner)
+    clean_email := LOWER(COALESCE(NEW.email, ''));
+
+    -- 1. Determine role from metadata (case-insensitive) or email heuristics (for Dashboard-created users)
     IF LOWER(COALESCE(NEW.raw_user_meta_data->>'role', '')) IN ('provider', 'service_provider') THEN
         assigned_role := 'provider';
     ELSIF LOWER(COALESCE(NEW.raw_user_meta_data->>'role', '')) = 'admin' THEN
+        assigned_role := 'admin';
+    ELSIF clean_email ILIKE '%.vet@%' OR clean_email ILIKE '%.grooming@%' OR clean_email ILIKE '%.happytails@%' 
+       OR clean_email ILIKE '%.k9@%' OR clean_email ILIKE '%.walkers@%' OR clean_email ILIKE '%.petride@%' 
+       OR clean_email ILIKE '%provider%' THEN
+        assigned_role := 'provider';
+    ELSIF clean_email ILIKE 'admin@%' THEN
         assigned_role := 'admin';
     ELSE
         assigned_role := 'pet_owner';
     END IF;
 
-    user_full_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', 'Pet Parent');
-    user_phone := NEW.raw_user_meta_data->>'phone';
-    business_title := COALESCE(NEW.raw_user_meta_data->>'business_name', user_full_name || '''s Pet Care');
-    user_location := COALESCE(NEW.raw_user_meta_data->>'location', NEW.raw_user_meta_data->>'city', 'Bengaluru');
+    -- 2. Determine full name from metadata or known demo accounts
+    IF NEW.raw_user_meta_data->>'full_name' IS NOT NULL THEN
+        user_full_name := NEW.raw_user_meta_data->>'full_name';
+    ELSIF NEW.raw_user_meta_data->>'name' IS NOT NULL THEN
+        user_full_name := NEW.raw_user_meta_data->>'name';
+    ELSIF clean_email = 'aarav.vet@example.com' THEN
+        user_full_name := 'Dr. Aarav Sharma';
+    ELSIF clean_email = 'pooja.grooming@example.com' THEN
+        user_full_name := 'Pooja Deshmukh';
+    ELSIF clean_email = 'rohan.happytails@example.com' THEN
+        user_full_name := 'Rohan Mehra';
+    ELSIF clean_email = 'vikram.k9@example.com' THEN
+        user_full_name := 'Vikram Joshi';
+    ELSIF clean_email = 'ananya.walkers@example.com' THEN
+        user_full_name := 'Ananya Reddy';
+    ELSIF clean_email = 'karthik.petride@example.com' THEN
+        user_full_name := 'Karthik Subramanian';
+    ELSIF clean_email = 'priya.petowner@example.com' THEN
+        user_full_name := 'Priya Sundaram';
+    ELSIF clean_email = 'admin@petcare.org' THEN
+        user_full_name := 'System Administrator';
+    ELSE
+        user_full_name := INITCAP(SPLIT_PART(NEW.email, '@', 1));
+    END IF;
 
-    -- Insert into public.users
+    -- 3. Determine phone
+    user_phone := COALESCE(NEW.raw_user_meta_data->>'phone', 
+        CASE 
+            WHEN clean_email = 'aarav.vet@example.com' THEN '+91 98450 12345'
+            WHEN clean_email = 'pooja.grooming@example.com' THEN '+91 98200 45678'
+            WHEN clean_email = 'rohan.happytails@example.com' THEN '+91 98110 78901'
+            WHEN clean_email = 'vikram.k9@example.com' THEN '+91 97660 33445'
+            WHEN clean_email = 'ananya.walkers@example.com' THEN '+91 94400 99887'
+            WHEN clean_email = 'karthik.petride@example.com' THEN '+91 98840 55667'
+            WHEN clean_email = 'priya.petowner@example.com' THEN '+91 98765 43210'
+            WHEN clean_email = 'admin@petcare.org' THEN '+91 80234 56789'
+            ELSE NULL 
+        END
+    );
+
+    -- 4. Determine business title & location
+    business_title := COALESCE(
+        NEW.raw_user_meta_data->>'business_name',
+        CASE
+            WHEN clean_email = 'aarav.vet@example.com' THEN 'Paws & Claws Veterinary Wellness'
+            WHEN clean_email = 'pooja.grooming@example.com' THEN 'Velvet Fur Luxury Grooming Salon'
+            WHEN clean_email = 'rohan.happytails@example.com' THEN 'Happy Tails Green Boarding Resort'
+            WHEN clean_email = 'vikram.k9@example.com' THEN 'Pawsome Canines Training Academy'
+            WHEN clean_email = 'ananya.walkers@example.com' THEN 'CityWalkers & Feline Friends'
+            WHEN clean_email = 'karthik.petride@example.com' THEN 'PetRide Express Cab & Ambulance'
+            ELSE user_full_name || '''s Pet Care'
+        END
+    );
+
+    user_location := COALESCE(
+        NEW.raw_user_meta_data->>'location',
+        NEW.raw_user_meta_data->>'city',
+        CASE
+            WHEN clean_email = 'aarav.vet@example.com' THEN 'Indiranagar, Bengaluru'
+            WHEN clean_email = 'pooja.grooming@example.com' THEN 'Bandra West, Mumbai'
+            WHEN clean_email = 'rohan.happytails@example.com' THEN 'Gurugram, Delhi NCR'
+            WHEN clean_email = 'vikram.k9@example.com' THEN 'Koregaon Park, Pune'
+            WHEN clean_email = 'ananya.walkers@example.com' THEN 'Jubilee Hills, Hyderabad'
+            WHEN clean_email = 'karthik.petride@example.com' THEN 'Adyar, Chennai'
+            ELSE 'Bengaluru'
+        END
+    );
+
+    -- Insert or update public.users
     INSERT INTO public.users (id, full_name, email, role, phone)
     VALUES (NEW.id, user_full_name, NEW.email, assigned_role, user_phone)
     ON CONFLICT (id) DO UPDATE
     SET full_name = EXCLUDED.full_name,
         role = EXCLUDED.role,
-        phone = EXCLUDED.phone;
+        phone = COALESCE(EXCLUDED.phone, public.users.phone);
 
     -- If provider, create provider profile
     IF assigned_role = 'provider' THEN
         INSERT INTO public.providers (user_id, business_name, location, description, verified)
-        VALUES (NEW.id, business_title, user_location, 'Dedicated pet wellness specialist offering high quality care.', false)
+        VALUES (NEW.id, business_title, user_location, 'Dedicated pet wellness specialist offering high quality care.', true)
         ON CONFLICT (user_id) DO NOTHING;
     END IF;
 
