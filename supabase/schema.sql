@@ -100,10 +100,18 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     status public.booking_status DEFAULT 'PENDING' NOT NULL,
     total_price NUMERIC(10,2) NOT NULL,
     booking_notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    -- Prevent conflicting duplicate bookings for identical slot
-    CONSTRAINT uq_slot_conflict UNIQUE (provider_id, booking_date, booking_time, status)
+    created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+-- Drop legacy flawed unique constraint if previously created on table
+ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS uq_slot_conflict;
+
+-- Partial unique index: ensures no two active bookings share the same provider, date and time slot.
+-- Active statuses are PENDING, CONFIRMED, and COMPLETED.
+-- Only when a booking has status = 'CANCELLED' is that slot freed for another booking.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_active_booking_slot
+ON public.bookings (provider_id, booking_date, booking_time)
+WHERE status != 'CANCELLED';
 
 -- 9. REVIEWS TABLE
 CREATE TABLE IF NOT EXISTS public.reviews (
@@ -256,8 +264,18 @@ CREATE POLICY "Admin full control on providers" ON public.providers
 
 -- 3. PETS POLICIES
 DROP POLICY IF EXISTS "Owners can view own pets" ON public.pets;
-CREATE POLICY "Owners can view own pets" ON public.pets
-    FOR SELECT USING (auth.uid() = owner_id OR public.is_admin());
+DROP POLICY IF EXISTS "Owners and booked providers can view pets" ON public.pets;
+CREATE POLICY "Owners and booked providers can view pets" ON public.pets
+    FOR SELECT USING (
+        auth.uid() = owner_id OR 
+        public.is_admin() OR
+        auth.uid() IN (
+            SELECT pr.user_id 
+            FROM public.bookings b 
+            JOIN public.providers pr ON b.provider_id = pr.id 
+            WHERE b.pet_id = pets.id
+        )
+    );
 
 DROP POLICY IF EXISTS "Owners can insert pets" ON public.pets;
 CREATE POLICY "Owners can insert pets" ON public.pets
@@ -340,6 +358,10 @@ DROP POLICY IF EXISTS "Users view own notifications" ON public.notifications;
 CREATE POLICY "Users view own notifications" ON public.notifications
     FOR SELECT USING (auth.uid() = user_id OR public.is_admin());
 
+DROP POLICY IF EXISTS "Users insert own notifications" ON public.notifications;
+CREATE POLICY "Users insert own notifications" ON public.notifications
+    FOR INSERT WITH CHECK (auth.uid() = user_id OR public.is_admin());
+
 DROP POLICY IF EXISTS "Users update own notifications" ON public.notifications;
 CREATE POLICY "Users update own notifications" ON public.notifications
     FOR UPDATE USING (auth.uid() = user_id);
@@ -354,8 +376,34 @@ CREATE POLICY "Users insert chat history" ON public.chat_history
     FOR INSERT WITH CHECK (auth.uid() = user_id OR auth.uid() IS NULL);
 
 -- ==========================================================
--- ENABLE REAL-TIME BROADCASTS
+-- ENABLE REAL-TIME BROADCASTS (IDEMPOTENT)
 -- ==========================================================
-ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.services;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = 'bookings'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = 'notifications'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+          AND schemaname = 'public' 
+          AND tablename = 'services'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.services;
+    END IF;
+END $$;

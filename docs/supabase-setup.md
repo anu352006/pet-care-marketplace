@@ -124,6 +124,7 @@ RLS is strictly enforced on all tables. Helper functions `public.is_admin()` and
 | `bookings` | Update booking status | `UPDATE` | Customer (can cancel), Provider, or `is_admin()` |
 | `reviews`  | Anyone can view reviews | `SELECT` | Public / All users |
 | `reviews`  | Customers post reviews | `INSERT` | Matching `user_id = auth.uid()` |
+| `notifications` | Users view and manage own notifications | `SELECT, INSERT, UPDATE` | Matching `user_id = auth.uid()` or `is_admin()` |
 | `chat_history` | Users view own chat history | `SELECT, INSERT` | Matching `user_id = auth.uid()` or `is_admin()` |
 
 ---
