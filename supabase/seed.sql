@@ -29,6 +29,8 @@
 -- It is completely idempotent and safe to rerun multiple times without duplicates.
 -- ============================================================================
 
+SET search_path = public, extensions, auth;
+
 DO $$
 DECLARE
     admin_uid UUID;

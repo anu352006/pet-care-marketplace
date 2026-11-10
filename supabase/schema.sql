@@ -15,7 +15,7 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE public.booking_status AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED');
+    CREATE TYPE public.booking_status AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED', 'REJECTED');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -107,11 +107,11 @@ CREATE TABLE IF NOT EXISTS public.bookings (
 ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS uq_slot_conflict;
 
 -- Partial unique index: ensures no two active bookings share the same provider, date and time slot.
--- Active statuses are PENDING, CONFIRMED, and COMPLETED.
--- Only when a booking has status = 'CANCELLED' is that slot freed for another booking.
+-- Blocks genuinely active bookings: PENDING and CONFIRMED.
+-- Releases slots for non-active bookings: CANCELLED, REJECTED, and COMPLETED.
 CREATE UNIQUE INDEX IF NOT EXISTS uq_active_booking_slot
 ON public.bookings (provider_id, booking_date, booking_time)
-WHERE status != 'CANCELLED';
+WHERE status IN ('PENDING', 'CONFIRMED');
 
 -- 9. REVIEWS TABLE
 CREATE TABLE IF NOT EXISTS public.reviews (
@@ -181,10 +181,10 @@ DECLARE
     business_title TEXT;
     user_location TEXT;
 BEGIN
-    -- Determine role from metadata (default pet_owner)
-    IF (NEW.raw_user_meta_data->>'role') = 'provider' THEN
+    -- Determine role from metadata (case-insensitive, default pet_owner)
+    IF LOWER(COALESCE(NEW.raw_user_meta_data->>'role', '')) IN ('provider', 'service_provider') THEN
         assigned_role := 'provider';
-    ELSIF (NEW.raw_user_meta_data->>'role') = 'admin' THEN
+    ELSIF LOWER(COALESCE(NEW.raw_user_meta_data->>'role', '')) = 'admin' THEN
         assigned_role := 'admin';
     ELSE
         assigned_role := 'pet_owner';
@@ -200,6 +200,7 @@ BEGIN
     VALUES (NEW.id, user_full_name, NEW.email, assigned_role, user_phone)
     ON CONFLICT (id) DO UPDATE
     SET full_name = EXCLUDED.full_name,
+        role = EXCLUDED.role,
         phone = EXCLUDED.phone;
 
     -- If provider, create provider profile
