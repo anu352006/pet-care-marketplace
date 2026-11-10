@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     avatar_url TEXT DEFAULT 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80',
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 -- 4. SERVICE PROVIDERS TABLE
 CREATE TABLE IF NOT EXISTS public.providers (
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS public.providers (
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     CONSTRAINT uq_provider_user UNIQUE (user_id)
 );
+ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
 
 -- 5. PETS TABLE
 CREATE TABLE IF NOT EXISTS public.pets (
@@ -60,6 +62,7 @@ CREATE TABLE IF NOT EXISTS public.pets (
     image_url TEXT DEFAULT 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80',
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+ALTER TABLE public.pets ENABLE ROW LEVEL SECURITY;
 
 -- 6. SERVICES TABLE
 CREATE TABLE IF NOT EXISTS public.services (
@@ -77,6 +80,7 @@ CREATE TABLE IF NOT EXISTS public.services (
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 
 -- 7. AVAILABILITY TABLE
 CREATE TABLE IF NOT EXISTS public.availability (
@@ -87,6 +91,7 @@ CREATE TABLE IF NOT EXISTS public.availability (
     end_time TIME NOT NULL,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+ALTER TABLE public.availability ENABLE ROW LEVEL SECURITY;
 
 -- 8. BOOKINGS TABLE
 CREATE TABLE IF NOT EXISTS public.bookings (
@@ -102,9 +107,7 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     booking_notes TEXT,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
-
--- Drop legacy flawed unique constraint if previously created on table
-ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS uq_slot_conflict;
+ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
 
 -- Partial unique index: ensures no two active bookings share the same provider, date and time slot.
 -- Blocks genuinely active bookings: PENDING and CONFIRMED.
@@ -124,6 +127,7 @@ CREATE TABLE IF NOT EXISTS public.reviews (
     review TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 
 -- 10. NOTIFICATIONS TABLE
 CREATE TABLE IF NOT EXISTS public.notifications (
@@ -134,6 +138,7 @@ CREATE TABLE IF NOT EXISTS public.notifications (
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
 -- 11. CHAT HISTORY TABLE (AI Assistant Sessions)
 CREATE TABLE IF NOT EXISTS public.chat_history (
@@ -144,6 +149,7 @@ CREATE TABLE IF NOT EXISTS public.chat_history (
     response TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+ALTER TABLE public.chat_history ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================================
 -- HELPER FUNCTIONS & TRIGGERS
