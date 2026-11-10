@@ -1,7 +1,8 @@
--- ==========================================================
--- SUPABASE STORAGE BUCKET CONFIGURATION & POLICIES
--- Run in Supabase SQL Editor:
--- ==========================================================
+-- ============================================================================
+-- SUPABASE STORAGE BUCKET CONFIGURATION & POLICIES (PostgreSQL 15+)
+-- Run in: Supabase Dashboard -> SQL Editor -> New query -> Paste & Run
+-- (Execute AFTER supabase/schema.sql)
+-- ============================================================================
 
 -- 1. Create Public Storage Buckets
 INSERT INTO storage.buckets (id, name, public)

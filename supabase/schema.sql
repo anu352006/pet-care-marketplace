@@ -1,7 +1,8 @@
--- ==========================================================
+-- ============================================================================
 -- SUPABASE POSTGRESQL SCHEMA: Pet Care & Services Marketplace
--- Run this in your Supabase Project: SQL Editor -> New Query -> Run
--- ==========================================================
+-- Pure PostgreSQL 15+ DDL for Supabase (NOT MySQL)
+-- Run this in: Supabase Dashboard -> SQL Editor -> New query -> Paste & Run
+-- ============================================================================
 
 -- 1. Enable Required Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -164,7 +165,7 @@ BEGIN
         WHERE id = auth.uid() AND role = 'admin'
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Function to check if authenticated user is provider
 CREATE OR REPLACE FUNCTION public.is_provider()
@@ -175,7 +176,7 @@ BEGIN
         WHERE id = auth.uid() AND role = 'provider'
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Trigger: Automatically create public.users record when new user signs up in auth.users
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -218,7 +219,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created

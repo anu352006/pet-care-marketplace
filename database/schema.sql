@@ -1,8 +1,18 @@
--- ==========================================================
--- DATABASE SCHEMA: pet_care_marketplace
+-- ============================================================================
+-- WARNING: DO NOT RUN THIS SCRIPT IN SUPABASE!
+-- ============================================================================
+-- This file contains MySQL 8.0 DDL (ENGINE=InnoDB, utf8mb4, BIGINT AUTO_INCREMENT)
+-- designed specifically for a standalone MySQL / Spring Boot backend.
+--
+-- Running this file in Supabase PostgreSQL WILL FAIL with:
+--   ERROR: 42601: syntax error at or near "CHARACTER"
+--
+-- FOR SUPABASE (PostgreSQL 15+), PLEASE EXECUTE:
+--   >>> supabase/schema.sql <<<
+-- ============================================================================
+
 -- Compatible with MySQL 8.0 & MySQL Workbench
 -- Full-Stack AI-Powered Pet Care & Services Marketplace
--- ==========================================================
 
 DROP DATABASE IF EXISTS pet_care_marketplace;
 CREATE DATABASE pet_care_marketplace CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

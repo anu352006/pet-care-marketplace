@@ -1,7 +1,15 @@
--- ==========================================================
--- SAMPLE DATA: pet_care_marketplace
+-- ============================================================================
+-- WARNING: DO NOT RUN THIS SCRIPT IN SUPABASE!
+-- ============================================================================
+-- This file contains legacy MySQL 8.0 seed commands (USE pet_care_marketplace,
+-- numeric BIGINT user IDs) designed for standalone MySQL / Spring Boot.
+--
+-- FOR SUPABASE (PostgreSQL 15+), PLEASE EXECUTE:
+--   >>> supabase/seed.sql <<<
+-- ============================================================================
+
+-- Compatible with MySQL 8.0 & MySQL Workbench
 -- Pre-seeded accounts, realistic Indian cities, INR pricing
--- ==========================================================
 
 USE pet_care_marketplace;
 
