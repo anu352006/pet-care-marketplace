@@ -1,12 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Read environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const rawUrl = import.meta.env.VITE_SUPABASE_URL || '';
+// Strip trailing slash and optional '/rest/v1' suffix if user provided the REST endpoint URL
+const supabaseUrl = typeof rawUrl === 'string' 
+  ? rawUrl.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '') 
+  : '';
+
 // Support both standard VITE_SUPABASE_PUBLISHABLE_KEY and VITE_SUPABASE_ANON_KEY
-const supabasePublishableKey = 
+const supabasePublishableKey = (
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
   import.meta.env.VITE_SUPABASE_ANON_KEY || 
-  '';
+  ''
+).trim();
 
 /**
  * Validates whether valid live Supabase credentials have been configured
