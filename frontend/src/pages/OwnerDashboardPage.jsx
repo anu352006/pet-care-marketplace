@@ -18,7 +18,7 @@ import './OwnerDashboardPage.css';
 
 const OwnerDashboardPage = () => {
   const { user } = useAuth();
-  const { pets, bookings, getPersonalizedRecommendations } = useMarketplace();
+  const { pets, bookings, getPersonalizedRecommendations, cancelBooking } = useMarketplace();
 
   // Active bookings
   const upcomingBookings = bookings.filter(b => b.status === 'CONFIRMED' || b.status === 'PENDING');
@@ -139,8 +139,19 @@ const OwnerDashboardPage = () => {
                         </div>
                       </div>
 
-                      <div className="app-price-box">
+                      <div className="app-price-box" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
                         <span className="app-price">₹{b.totalPrice.toLocaleString('en-IN')}</span>
+                        {b.status === 'PENDING' && (
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm text-danger"
+                            style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                            onClick={() => cancelBooking(b.id)}
+                            title="Cancel appointment"
+                          >
+                            Cancel Slot
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

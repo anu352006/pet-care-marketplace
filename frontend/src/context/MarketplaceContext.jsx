@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import {
   SERVICES as INITIAL_SERVICES,
@@ -12,7 +12,7 @@ import {
 
 const MarketplaceContext = createContext(null);
 
-// Category name resolver
+// Category name resolver helper
 const getCategoryTitle = (catSlug) => {
   const match = CATEGORIES.find(c => c.id === catSlug || c.slug === catSlug);
   return match ? match.name : 'Pet Care Service';
@@ -21,55 +21,47 @@ const getCategoryTitle = (catSlug) => {
 export const MarketplaceProvider = ({ children }) => {
   const { user } = useAuth();
 
-  // State initialization with local cache fallback
+  // State initialization: when Supabase is configured we start fresh; otherwise fallback to sample data
   const [services, setServices] = useState(() => {
+    if (isSupabaseConfigured()) return [];
     const saved = localStorage.getItem('petcare_services');
     return saved ? JSON.parse(saved) : INITIAL_SERVICES;
   });
 
   const [providers, setProviders] = useState(() => {
+    if (isSupabaseConfigured()) return [];
     const saved = localStorage.getItem('petcare_providers');
     return saved ? JSON.parse(saved) : INITIAL_PROVIDERS;
   });
 
   const [pets, setPets] = useState(() => {
+    if (isSupabaseConfigured()) return [];
     const saved = localStorage.getItem('petcare_pets');
     return saved ? JSON.parse(saved) : INITIAL_PETS;
   });
 
   const [bookings, setBookings] = useState(() => {
+    if (isSupabaseConfigured()) return [];
     const saved = localStorage.getItem('petcare_bookings');
     return saved ? JSON.parse(saved) : INITIAL_BOOKINGS;
   });
 
   const [reviews, setReviews] = useState(() => {
+    if (isSupabaseConfigured()) return [];
     const saved = localStorage.getItem('petcare_reviews');
     return saved ? JSON.parse(saved) : INITIAL_REVIEWS;
   });
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'notif-1',
-      title: 'Appointment Confirmed',
-      message: 'Dr. Aarav Sharma confirmed your wellness exam for Bruno on Nov 08.',
-      time: '2 hours ago',
-      read: false
-    },
-    {
-      id: 'notif-2',
-      title: 'Vaccination Due Reminder',
-      message: 'Bruno is due for annual booster vaccination in 4 weeks.',
-      time: '1 day ago',
-      read: true
-    }
-  ]);
-
-  const [loading, setLoading] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
 
-  // Synchronize state with Supabase PostgreSQL Database
+  // ==========================================================================
+  // SYNCHRONIZE STATE WITH SUPABASE POSTGRESQL DATABASE
+  // ==========================================================================
   const fetchSupabaseData = useCallback(async () => {
     if (!isSupabaseConfigured()) {
+      setLoading(false);
       return;
     }
 
@@ -77,7 +69,7 @@ export const MarketplaceProvider = ({ children }) => {
     setFetchError(null);
 
     try {
-      // 1. Fetch Providers with joined Users
+      // 1. Fetch Providers with joined Users profile
       const { data: dbProviders, error: provErr } = await supabase
         .from('providers')
         .select(`
@@ -89,7 +81,7 @@ export const MarketplaceProvider = ({ children }) => {
           verified,
           rating,
           reviews_count,
-          users:user_id (
+          users (
             full_name,
             email,
             phone,
@@ -97,28 +89,33 @@ export const MarketplaceProvider = ({ children }) => {
           )
         `);
 
-      if (!provErr && dbProviders && dbProviders.length > 0) {
-        const mappedProviders = dbProviders.map(p => ({
-          id: p.id,
-          userId: p.user_id,
-          name: p.users?.full_name || 'Verified Provider',
-          businessName: p.business_name,
-          email: p.users?.email || '',
-          phone: p.users?.phone || '+91 98450 12345',
-          city: p.location,
-          area: p.location,
-          address: `${p.business_name}, ${p.location}`,
-          rating: Number(p.rating || 5.0),
-          reviewsCount: p.reviews_count || 0,
-          verified: !!p.verified,
-          avatar: p.users?.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=400&q=80',
-          bio: p.description || 'Dedicated pet care specialist.',
-          servicesCount: 3
-        }));
+      if (provErr) {
+        console.warn('Notice fetching providers from Supabase:', provErr);
+      } else if (dbProviders) {
+        const mappedProviders = dbProviders.map(p => {
+          const u = Array.isArray(p.users) ? p.users[0] : p.users;
+          return {
+            id: p.id,
+            userId: p.user_id,
+            name: u?.full_name || p.business_name || 'Verified Provider',
+            businessName: p.business_name,
+            email: u?.email || '',
+            phone: u?.phone || '+91 98450 12345',
+            city: p.location || 'Bengaluru',
+            area: p.location || 'Bengaluru',
+            address: `${p.business_name}, ${p.location}`,
+            rating: Number(p.rating || 5.0),
+            reviewsCount: p.reviews_count || 0,
+            verified: !!p.verified,
+            avatar: u?.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=400&q=80',
+            bio: p.description || 'Dedicated pet care specialist.',
+            servicesCount: 2
+          };
+        });
         setProviders(mappedProviders);
       }
 
-      // 2. Fetch Services with joined Providers
+      // 2. Fetch Active Marketplace Services with joined Provider details
       const { data: dbServices, error: servErr } = await supabase
         .from('services')
         .select(`
@@ -134,55 +131,77 @@ export const MarketplaceProvider = ({ children }) => {
           available_slots,
           featured,
           active,
-          providers:provider_id (
+          providers (
             id,
             business_name,
             location,
             verified,
-            users:user_id (
+            users (
               full_name
             )
           )
         `)
-        .eq('active', true);
+        .eq('active', true)
+        .order('created_at', { ascending: false });
 
-      if (!servErr && dbServices && dbServices.length > 0) {
-        const mappedServices = dbServices.map(s => ({
-          id: s.id,
-          name: s.title,
-          category: s.category,
-          categoryName: getCategoryTitle(s.category),
-          providerId: s.provider_id,
-          providerName: s.providers?.users?.full_name || s.providers?.business_name || 'Pet Care Specialist',
-          businessName: s.providers?.business_name || 'Care Center',
-          city: s.providers?.location || 'Bengaluru',
-          area: s.providers?.location || 'Indiranagar',
-          price: Number(s.price),
-          priceUnit: 'per consultation',
-          duration: s.duration || '45 mins',
-          rating: Number(s.rating || 5.0),
-          reviewsCount: 42,
-          featured: !!s.featured,
-          image: s.image_url || 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=800&q=80',
-          description: s.description,
-          included: [
-            'Professional clinical or hygiene care',
-            'Safe, sterilized environment',
-            'Dedicated handler support'
-          ],
-          availableSlots: s.available_slots || ['09:30 AM', '11:00 AM', '02:30 PM', '04:30 PM', '06:00 PM']
-        }));
+      if (servErr) {
+        console.warn('Notice fetching services from Supabase:', servErr);
+      } else if (dbServices) {
+        const mappedServices = dbServices.map(s => {
+          const prov = Array.isArray(s.providers) ? s.providers[0] : s.providers;
+          const provU = prov && Array.isArray(prov.users) ? prov.users[0] : prov?.users;
+
+          // Parse available slots array
+          let parsedSlots = ['09:30 AM', '11:00 AM', '02:30 PM', '04:30 PM', '06:00 PM'];
+          if (Array.isArray(s.available_slots)) {
+            parsedSlots = s.available_slots;
+          } else if (typeof s.available_slots === 'string') {
+            try {
+              parsedSlots = JSON.parse(s.available_slots);
+            } catch {
+              parsedSlots = s.available_slots.split(',').map(str => str.trim());
+            }
+          }
+
+          return {
+            id: s.id,
+            name: s.title,
+            category: s.category,
+            categoryName: getCategoryTitle(s.category),
+            providerId: s.provider_id,
+            providerName: provU?.full_name || prov?.business_name || 'Pet Care Specialist',
+            businessName: prov?.business_name || 'Care Center',
+            city: prov?.location || 'Bengaluru',
+            area: prov?.location || 'Indiranagar',
+            price: Number(s.price),
+            priceUnit: 'per consultation',
+            duration: s.duration || '45 mins',
+            rating: Number(s.rating || 5.0),
+            reviewsCount: 28,
+            featured: !!s.featured,
+            image: s.image_url || 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=800&q=80',
+            description: s.description,
+            included: [
+              'Professional clinical or grooming care',
+              'Safe, sanitized, climate-controlled environment',
+              'Post-appointment care recommendations'
+            ],
+            availableSlots: parsedSlots
+          };
+        });
         setServices(mappedServices);
       }
 
-      // 3. Fetch Pets (RLS isolates to owner unless admin)
-      let petQuery = supabase.from('pets').select('*');
+      // 3. Fetch Registered Pets (Filtered to logged-in owner unless admin)
+      let petQuery = supabase.from('pets').select('*').order('created_at', { ascending: false });
       if (user && user.role !== 'ADMIN') {
         petQuery = petQuery.eq('owner_id', user.id);
       }
-      const { data: dbPets, error: petErr } = await petQuery;
 
-      if (!petErr && dbPets && dbPets.length > 0) {
+      const { data: dbPets, error: petErr } = await petQuery;
+      if (petErr) {
+        console.warn('Notice fetching pets from Supabase:', petErr);
+      } else if (dbPets) {
         const mappedPets = dbPets.map(p => ({
           id: p.id,
           name: p.name,
@@ -199,7 +218,7 @@ export const MarketplaceProvider = ({ children }) => {
         setPets(mappedPets);
       }
 
-      // 4. Fetch Bookings
+      // 4. Fetch Bookings with relations
       let bkQuery = supabase
         .from('bookings')
         .select(`
@@ -214,9 +233,9 @@ export const MarketplaceProvider = ({ children }) => {
           total_price,
           booking_notes,
           created_at,
-          services:service_id (title, category),
-          providers:provider_id (business_name, location, users:user_id(full_name)),
-          pets:pet_id (name, breed)
+          services (title, category),
+          providers (business_name, location, users (full_name)),
+          pets (name, breed)
         `)
         .order('created_at', { ascending: false });
 
@@ -227,24 +246,33 @@ export const MarketplaceProvider = ({ children }) => {
       }
 
       const { data: dbBookings, error: bkErr } = await bkQuery;
-      if (!bkErr && dbBookings && dbBookings.length > 0) {
-        const mappedBookings = dbBookings.map(b => ({
-          id: b.id,
-          serviceId: b.service_id,
-          serviceName: b.services?.title || 'Pet Service',
-          category: b.services?.category || 'vet',
-          providerId: b.provider_id,
-          providerName: b.providers?.users?.full_name || b.providers?.business_name || 'Care Specialist',
-          businessName: b.providers?.business_name || 'Pet Clinic',
-          petId: b.pet_id,
-          petName: b.pets ? `${b.pets.name} (${b.pets.breed})` : 'Registered Companion',
-          date: b.booking_date,
-          timeSlot: b.booking_time,
-          totalPrice: Number(b.total_price),
-          status: b.status,
-          bookingNotes: b.booking_notes || 'Standard booking.',
-          createdAt: b.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
-        }));
+      if (bkErr) {
+        console.warn('Notice fetching bookings from Supabase:', bkErr);
+      } else if (dbBookings) {
+        const mappedBookings = dbBookings.map(b => {
+          const s = Array.isArray(b.services) ? b.services[0] : b.services;
+          const pr = Array.isArray(b.providers) ? b.providers[0] : b.providers;
+          const prU = pr && Array.isArray(pr.users) ? pr.users[0] : pr?.users;
+          const pt = Array.isArray(b.pets) ? b.pets[0] : b.pets;
+
+          return {
+            id: b.id,
+            serviceId: b.service_id,
+            serviceName: s?.title || 'Pet Care Service',
+            category: s?.category || 'vet',
+            providerId: b.provider_id,
+            providerName: prU?.full_name || pr?.business_name || 'Care Specialist',
+            businessName: pr?.business_name || 'Pet Wellness Center',
+            petId: b.pet_id,
+            petName: pt ? `${pt.name} (${pt.breed})` : 'Registered Companion',
+            date: b.booking_date,
+            timeSlot: b.booking_time,
+            totalPrice: Number(b.total_price),
+            status: b.status,
+            bookingNotes: b.booking_notes || 'Standard booking.',
+            createdAt: b.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+          };
+        });
         setBookings(mappedBookings);
       }
 
@@ -256,27 +284,40 @@ export const MarketplaceProvider = ({ children }) => {
           rating,
           review,
           created_at,
-          users:user_id (full_name),
-          services:service_id (title),
-          providers:provider_id (business_name)
+          user_id,
+          provider_id,
+          service_id,
+          users (full_name),
+          services (title),
+          providers (business_name)
         `)
         .order('created_at', { ascending: false });
 
-      if (!revErr && dbReviews && dbReviews.length > 0) {
-        const mappedReviews = dbReviews.map(r => ({
-          id: r.id,
-          userName: r.users?.full_name || 'Happy Pet Parent',
-          userCity: 'Bengaluru',
-          serviceName: r.services?.title || 'Pet Care Service',
-          providerName: r.providers?.business_name || 'Care Provider',
-          rating: r.rating,
-          date: new Date(r.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-          comment: r.review
-        }));
+      if (revErr) {
+        console.warn('Notice fetching reviews from Supabase:', revErr);
+      } else if (dbReviews) {
+        const mappedReviews = dbReviews.map(r => {
+          const u = Array.isArray(r.users) ? r.users[0] : r.users;
+          const s = Array.isArray(r.services) ? r.services[0] : r.services;
+          const p = Array.isArray(r.providers) ? r.providers[0] : r.providers;
+
+          return {
+            id: r.id,
+            serviceId: r.service_id,
+            providerId: r.provider_id,
+            userName: u?.full_name || 'Verified Pet Parent',
+            userCity: 'Bengaluru',
+            serviceName: s?.title || 'Pet Care Service',
+            providerName: p?.business_name || 'Care Provider',
+            rating: Number(r.rating || 5),
+            date: new Date(r.created_at).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' }),
+            comment: r.review
+          };
+        });
         setReviews(mappedReviews);
       }
 
-      // 6. Fetch Notifications
+      // 6. Fetch User Notifications
       if (user) {
         const { data: dbNotifs } = await supabase
           .from('notifications')
@@ -295,8 +336,8 @@ export const MarketplaceProvider = ({ children }) => {
         }
       }
     } catch (err) {
-      console.warn('Supabase data synchronization notice:', err);
-      setFetchError(err.message);
+      console.error('Supabase synchronization error:', err);
+      setFetchError(err.message || 'Error fetching data from Supabase.');
     } finally {
       setLoading(false);
     }
@@ -306,30 +347,20 @@ export const MarketplaceProvider = ({ children }) => {
     fetchSupabaseData();
   }, [fetchSupabaseData]);
 
-  // Save to localStorage as secondary offline cache
+  // Sync state to localStorage as secondary offline cache
   useEffect(() => {
-    localStorage.setItem('petcare_services', JSON.stringify(services));
-  }, [services]);
+    if (!isSupabaseConfigured()) {
+      localStorage.setItem('petcare_services', JSON.stringify(services));
+      localStorage.setItem('petcare_providers', JSON.stringify(providers));
+      localStorage.setItem('petcare_pets', JSON.stringify(pets));
+      localStorage.setItem('petcare_bookings', JSON.stringify(bookings));
+      localStorage.setItem('petcare_reviews', JSON.stringify(reviews));
+    }
+  }, [services, providers, pets, bookings, reviews]);
 
-  useEffect(() => {
-    localStorage.setItem('petcare_providers', JSON.stringify(providers));
-  }, [providers]);
-
-  useEffect(() => {
-    localStorage.setItem('petcare_pets', JSON.stringify(pets));
-  }, [pets]);
-
-  useEffect(() => {
-    localStorage.setItem('petcare_bookings', JSON.stringify(bookings));
-  }, [bookings]);
-
-  useEffect(() => {
-    localStorage.setItem('petcare_reviews', JSON.stringify(reviews));
-  }, [reviews]);
-
-  // ==========================================
+  // ==========================================================================
   // PET PROFILE MANAGEMENT (CRUD)
-  // ==========================================
+  // ==========================================================================
   const addPet = async (petData) => {
     let newPet = {
       ...petData,
@@ -341,30 +372,30 @@ export const MarketplaceProvider = ({ children }) => {
     };
 
     if (isSupabaseConfigured() && user) {
-      try {
-        const { data, error } = await supabase
-          .from('pets')
-          .insert({
-            owner_id: user.id,
-            name: petData.name,
-            animal_type: petData.type || 'Dog',
-            breed: petData.breed,
-            age: Number(petData.age) || 1,
-            gender: petData.gender || 'Male',
-            weight: petData.weight || '10 kg',
-            vaccination_details: petData.vaccinations || '',
-            medical_history: petData.medicalHistory || '',
-            image_url: newPet.photo
-          })
-          .select()
-          .single();
+      const { data, error } = await supabase
+        .from('pets')
+        .insert({
+          owner_id: user.id,
+          name: petData.name,
+          animal_type: petData.type || 'Dog',
+          breed: petData.breed || 'Companion',
+          age: Number(petData.age) || 1,
+          gender: petData.gender || 'Male',
+          weight: petData.weight || '10 kg',
+          vaccination_details: petData.vaccinations || '',
+          medical_history: petData.medicalHistory || '',
+          image_url: newPet.photo
+        })
+        .select()
+        .single();
 
-        if (error) throw error;
-        if (data) {
-          newPet.id = data.id;
-        }
-      } catch (err) {
-        console.error('Supabase pet insertion failed:', err);
+      if (error) {
+        console.error('Supabase pet insertion failed:', error);
+        throw new Error(error.message || 'Failed to save pet profile.');
+      }
+      if (data) {
+        newPet.id = data.id;
+        newPet.ownerId = data.owner_id;
       }
     }
 
@@ -374,23 +405,24 @@ export const MarketplaceProvider = ({ children }) => {
 
   const updatePet = async (id, updatedFields) => {
     if (isSupabaseConfigured()) {
-      try {
-        await supabase
-          .from('pets')
-          .update({
-            name: updatedFields.name,
-            animal_type: updatedFields.type,
-            breed: updatedFields.breed,
-            age: Number(updatedFields.age) || 1,
-            gender: updatedFields.gender,
-            weight: updatedFields.weight,
-            vaccination_details: updatedFields.vaccinations,
-            medical_history: updatedFields.medicalHistory,
-            image_url: updatedFields.photo
-          })
-          .eq('id', id);
-      } catch (err) {
-        console.error('Supabase pet update failed:', err);
+      const { error } = await supabase
+        .from('pets')
+        .update({
+          name: updatedFields.name,
+          animal_type: updatedFields.type,
+          breed: updatedFields.breed,
+          age: Number(updatedFields.age) || 1,
+          gender: updatedFields.gender,
+          weight: updatedFields.weight,
+          vaccination_details: updatedFields.vaccinations,
+          medical_history: updatedFields.medicalHistory,
+          image_url: updatedFields.photo
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Supabase pet update failed:', error);
+        throw new Error(error.message || 'Failed to update pet profile.');
       }
     }
 
@@ -399,41 +431,54 @@ export const MarketplaceProvider = ({ children }) => {
 
   const deletePet = async (id) => {
     if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('pets').delete().eq('id', id);
-      } catch (err) {
-        console.error('Supabase pet deletion failed:', err);
+      const { error } = await supabase
+        .from('pets')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Supabase pet deletion failed:', error);
+        throw new Error(error.message || 'Failed to delete pet profile.');
       }
     }
 
     setPets(prev => prev.filter(p => String(p.id) !== String(id)));
   };
 
-  // ==========================================
+  // ==========================================================================
   // BOOKING WORKFLOW & CONFLICT PREVENTION
-  // ==========================================
+  // ==========================================================================
   const checkSlotAvailability = (providerId, date, timeSlot) => {
     const conflict = bookings.some(
       b => String(b.providerId) === String(providerId) &&
            b.date === date &&
            b.timeSlot === timeSlot &&
-           b.status !== 'CANCELLED'
+           ['PENDING', 'CONFIRMED'].includes(b.status)
     );
     return !conflict;
   };
 
-  const createBooking = async (bookingData) => {
-    // 1. Prevent conflicting double bookings for identical provider, date and slot
-    const isAvailable = checkSlotAvailability(
-      bookingData.providerId,
-      bookingData.date,
-      bookingData.timeSlot
-    );
-
-    if (!isAvailable) {
-      throw new Error(`The slot "${bookingData.timeSlot}" on ${bookingData.date} is already reserved for this provider. Please select an alternative slot.`);
+  const checkProviderAvailability = async (providerId, date) => {
+    if (!isSupabaseConfigured()) {
+      return { available: true, bookedSlots: [] };
     }
+    try {
+      const { data: bookedData } = await supabase
+        .from('bookings')
+        .select('booking_time')
+        .eq('provider_id', providerId)
+        .eq('booking_date', date)
+        .in('status', ['PENDING', 'CONFIRMED']);
 
+      const bookedSlots = bookedData ? bookedData.map(b => b.booking_time) : [];
+      return { available: true, bookedSlots };
+    } catch (err) {
+      console.warn('Notice checking slot availability:', err);
+      return { available: true, bookedSlots: [] };
+    }
+  };
+
+  const createBooking = async (bookingData) => {
     let newBooking = {
       ...bookingData,
       id: 'BK-' + Math.floor(1000 + Math.random() * 9000),
@@ -442,56 +487,75 @@ export const MarketplaceProvider = ({ children }) => {
     };
 
     if (isSupabaseConfigured() && user) {
+      // 1. Verify availability in live Supabase table
+      const { data: existingSlots, error: checkErr } = await supabase
+        .from('bookings')
+        .select('id, status')
+        .eq('provider_id', bookingData.providerId)
+        .eq('booking_date', bookingData.date)
+        .eq('booking_time', bookingData.timeSlot)
+        .in('status', ['PENDING', 'CONFIRMED']);
+
+      if (existingSlots && existingSlots.length > 0) {
+        throw new Error(`The slot "${bookingData.timeSlot}" on ${bookingData.date} is already reserved for this provider. Please select an alternative slot.`);
+      }
+
+      // 2. Insert into Supabase bookings table
+      const { data: dbBooking, error: insErr } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          pet_id: bookingData.petId,
+          service_id: bookingData.serviceId,
+          provider_id: bookingData.providerId,
+          booking_date: bookingData.date,
+          booking_time: bookingData.timeSlot,
+          status: 'PENDING',
+          total_price: Number(bookingData.totalPrice),
+          booking_notes: bookingData.bookingNotes || ''
+        })
+        .select()
+        .single();
+
+      if (insErr) {
+        console.error('Booking insertion failed in Supabase:', insErr);
+        if (insErr.code === '23505') {
+          throw new Error(`Database Conflict: The slot "${bookingData.timeSlot}" on ${bookingData.date} is already occupied.`);
+        }
+        throw new Error(insErr.message || 'Failed to place booking.');
+      }
+
+      if (dbBooking) {
+        newBooking.id = dbBooking.id;
+        newBooking.createdAt = dbBooking.created_at?.split('T')[0] || newBooking.createdAt;
+      }
+
+      // 3. Store notification for user in Supabase
       try {
-        // Query live Supabase table for double-booking conflict
-        const { data: existingSlots } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('provider_id', bookingData.providerId)
-          .eq('booking_date', bookingData.date)
-          .eq('booking_time', bookingData.timeSlot)
-          .neq('status', 'CANCELLED');
-
-        if (existingSlots && existingSlots.length > 0) {
-          throw new Error(`The slot "${bookingData.timeSlot}" on ${bookingData.date} is already reserved in the database.`);
-        }
-
-        const { data: dbBooking, error: insErr } = await supabase
-          .from('bookings')
-          .insert({
-            user_id: user.id,
-            pet_id: bookingData.petId,
-            service_id: bookingData.serviceId,
-            provider_id: bookingData.providerId,
-            booking_date: bookingData.date,
-            booking_time: bookingData.timeSlot,
-            status: 'PENDING',
-            total_price: Number(bookingData.totalPrice),
-            booking_notes: bookingData.bookingNotes || ''
-          })
-          .select()
-          .single();
-
-        if (insErr) {
-          console.warn('Booking insert into Supabase returned notice:', insErr);
-        } else if (dbBooking) {
-          newBooking.id = dbBooking.id;
-        }
-
-        // Store notification
         await supabase.from('notifications').insert({
           user_id: user.id,
           title: 'New Booking Created',
-          message: `Booking request placed for ${bookingData.serviceName} on ${bookingData.date}.`
+          message: `Booking request placed for ${bookingData.serviceName} on ${bookingData.date} at ${bookingData.timeSlot}.`
         });
-      } catch (err) {
-        console.warn('Supabase booking notice:', err);
+      } catch (notifErr) {
+        console.warn('Notice creating booking notification:', notifErr);
+      }
+    } else {
+      // Offline fallback conflict check
+      const conflict = bookings.some(
+        b => String(b.providerId) === String(bookingData.providerId) &&
+             b.date === bookingData.date &&
+             b.timeSlot === bookingData.timeSlot &&
+             ['PENDING', 'CONFIRMED'].includes(b.status)
+      );
+      if (conflict) {
+        throw new Error(`The slot "${bookingData.timeSlot}" on ${bookingData.date} is already reserved.`);
       }
     }
 
     setBookings(prev => [newBooking, ...prev]);
 
-    // Push local notification
+    // Local UI notification
     setNotifications(prev => [
       {
         id: 'notif-' + Date.now(),
@@ -508,21 +572,26 @@ export const MarketplaceProvider = ({ children }) => {
 
   const updateBookingStatus = async (bookingId, newStatus) => {
     if (isSupabaseConfigured()) {
-      try {
-        await supabase
-          .from('bookings')
-          .update({ status: newStatus })
-          .eq('id', bookingId);
+      const { error: updErr } = await supabase
+        .from('bookings')
+        .update({ status: newStatus })
+        .eq('id', bookingId);
 
-        if (user) {
+      if (updErr) {
+        console.error('Supabase booking status update error:', updErr);
+        throw new Error(updErr.message || 'Failed to update booking status.');
+      }
+
+      if (user) {
+        try {
           await supabase.from('notifications').insert({
             user_id: user.id,
             title: `Booking ${newStatus}`,
             message: `Appointment ${bookingId} has been updated to ${newStatus}.`
           });
+        } catch (nErr) {
+          console.warn('Notice saving status notification:', nErr);
         }
-      } catch (err) {
-        console.error('Supabase booking status update error:', err);
       }
     }
 
@@ -540,28 +609,36 @@ export const MarketplaceProvider = ({ children }) => {
     ]);
   };
 
-  // ==========================================
+  const cancelBooking = async (bookingId) => {
+    return updateBookingStatus(bookingId, 'CANCELLED');
+  };
+
+  // ==========================================================================
   // REVIEWS & RATINGS
-  // ==========================================
+  // ==========================================================================
   const addReview = async (reviewData) => {
     const newRev = {
       ...reviewData,
       id: 'rev-' + Date.now(),
-      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      date: new Date().toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })
     };
 
     if (isSupabaseConfigured() && user) {
-      try {
-        await supabase.from('reviews').insert({
-          user_id: user.id,
-          booking_id: reviewData.bookingId || null,
-          provider_id: reviewData.providerId || null,
-          service_id: reviewData.serviceId || null,
-          rating: Number(reviewData.rating),
-          review: reviewData.comment || reviewData.review || ''
-        });
-      } catch (err) {
-        console.error('Supabase review insertion error:', err);
+      const { data, error } = await supabase.from('reviews').insert({
+        user_id: user.id,
+        booking_id: reviewData.bookingId || null,
+        provider_id: reviewData.providerId || null,
+        service_id: reviewData.serviceId || null,
+        rating: Number(reviewData.rating),
+        review: reviewData.comment || reviewData.review || ''
+      }).select().single();
+
+      if (error) {
+        console.error('Supabase review insertion error:', error);
+        throw new Error(error.message || 'Failed to submit review.');
+      }
+      if (data) {
+        newRev.id = data.id;
       }
     }
 
@@ -580,21 +657,22 @@ export const MarketplaceProvider = ({ children }) => {
     }
   };
 
-  // ==========================================
+  // ==========================================================================
   // PROVIDER VERIFICATION (ADMIN)
-  // ==========================================
+  // ==========================================================================
   const toggleProviderVerification = async (providerId) => {
     const currentProv = providers.find(p => String(p.id) === String(providerId));
     const nextVerified = currentProv ? !currentProv.verified : true;
 
     if (isSupabaseConfigured()) {
-      try {
-        await supabase
-          .from('providers')
-          .update({ verified: nextVerified })
-          .eq('id', providerId);
-      } catch (err) {
-        console.error('Supabase provider verification update error:', err);
+      const { error } = await supabase
+        .from('providers')
+        .update({ verified: nextVerified })
+        .eq('id', providerId);
+
+      if (error) {
+        console.error('Supabase provider verification update error:', error);
+        throw new Error(error.message || 'Failed to update verification status.');
       }
     }
 
@@ -606,9 +684,9 @@ export const MarketplaceProvider = ({ children }) => {
     }));
   };
 
-  // ==========================================
+  // ==========================================================================
   // SERVICE MANAGEMENT (PROVIDER / ADMIN)
-  // ==========================================
+  // ==========================================================================
   const addService = async (serviceData) => {
     let newService = {
       ...serviceData,
@@ -619,26 +697,26 @@ export const MarketplaceProvider = ({ children }) => {
     };
 
     if (isSupabaseConfigured() && user) {
-      try {
-        const { data, error } = await supabase
-          .from('services')
-          .insert({
-            provider_id: user.providerId || serviceData.providerId,
-            category: serviceData.category,
-            title: serviceData.name || serviceData.title,
-            description: serviceData.description,
-            price: Number(serviceData.price),
-            image_url: serviceData.image || '',
-            rating: 5.0
-          })
-          .select()
-          .single();
+      const { data, error } = await supabase
+        .from('services')
+        .insert({
+          provider_id: user.providerId || serviceData.providerId,
+          category: serviceData.category,
+          title: serviceData.name || serviceData.title,
+          description: serviceData.description,
+          price: Number(serviceData.price),
+          image_url: serviceData.image || '',
+          rating: 5.0
+        })
+        .select()
+        .single();
 
-        if (!error && data) {
-          newService.id = data.id;
-        }
-      } catch (err) {
-        console.error('Supabase service insertion error:', err);
+      if (error) {
+        console.error('Supabase service insertion error:', error);
+        throw new Error(error.message || 'Failed to create service listing.');
+      }
+      if (data) {
+        newService.id = data.id;
       }
     }
 
@@ -648,39 +726,32 @@ export const MarketplaceProvider = ({ children }) => {
 
   const deleteService = async (serviceId) => {
     if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('services').delete().eq('id', serviceId);
-      } catch (err) {
-        console.error('Supabase service deletion error:', err);
+      const { error } = await supabase.from('services').delete().eq('id', serviceId);
+      if (error) {
+        console.error('Supabase service deletion error:', error);
+        throw new Error(error.message || 'Failed to delete service listing.');
       }
     }
 
     setServices(prev => prev.filter(s => String(s.id) !== String(serviceId)));
   };
 
-  // ==========================================
-  // AI-BASED SERVICE RECOMMENDATIONS
-  // ==========================================
+  // ==========================================================================
+  // AI-BASED PERSONALIZED RECOMMENDATIONS
+  // ==========================================================================
   const getPersonalizedRecommendations = (petId) => {
     const selectedPet = pets.find(p => String(p.id) === String(petId)) || pets[0];
     if (!selectedPet) return services.slice(0, 3);
 
     return services.filter(service => {
-      // Logic for puppies or senior pets
       if (selectedPet.age <= 1 && service.category === 'training') return true;
       if (selectedPet.age >= 6 && service.category === 'vet') return true;
-      
-      // Breed specific grooming
       if ((selectedPet.breed?.includes('Retriever') || selectedPet.breed?.includes('Persian') || selectedPet.breed?.includes('Poodle')) && service.category === 'grooming') {
         return true;
       }
-
-      // High-energy breeds
       if ((selectedPet.breed?.includes('Retriever') || selectedPet.breed?.includes('Beagle') || selectedPet.breed?.includes('German')) && (service.category === 'walking' || service.category === 'daycare')) {
         return true;
       }
-
-      // Default to high rated services
       return service.rating >= 4.8;
     }).slice(0, 4);
   };
@@ -700,8 +771,10 @@ export const MarketplaceProvider = ({ children }) => {
       updatePet,
       deletePet,
       checkSlotAvailability,
+      checkProviderAvailability,
       createBooking,
       updateBookingStatus,
+      cancelBooking,
       addReview,
       toggleProviderVerification,
       addService,

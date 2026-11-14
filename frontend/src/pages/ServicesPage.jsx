@@ -8,7 +8,7 @@ import { Search, Filter, MapPin, SlidersHorizontal, RotateCcw, Star } from 'luci
 import './ServicesPage.css';
 
 const ServicesPage = () => {
-  const { services } = useMarketplace();
+  const { services, loading, fetchError } = useMarketplace();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // URL query params
@@ -208,15 +208,35 @@ const ServicesPage = () => {
 
           {/* Results Area */}
           <main className="services-results-area">
+            {fetchError && (
+              <div className="alert alert-danger" style={{ marginBottom: '1.5rem' }}>
+                <span>Notice from database: {fetchError}</span>
+              </div>
+            )}
+
             {/* Results Counter Bar */}
             <div className="results-status-bar">
               <span className="results-count">
-                Showing <strong>{filteredServices.length}</strong> services
-                {selectedCity !== 'All Cities' && ` in ${selectedCity}`}
+                {loading ? (
+                  <span>Loading services from Supabase...</span>
+                ) : (
+                  <>
+                    Showing <strong>{filteredServices.length}</strong> services
+                    {selectedCity !== 'All Cities' && ` in ${selectedCity}`}
+                  </>
+                )}
               </span>
             </div>
 
-            {filteredServices.length > 0 ? (
+            {loading ? (
+              <div className="empty-results-card card" style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+                <div className="empty-icon-wrap" style={{ animation: 'spin 1s linear infinite' }}>
+                  <RotateCcw size={32} className="text-primary" />
+                </div>
+                <h3>Fetching Catalog</h3>
+                <p>Retrieving verified pet care services from PostgreSQL database...</p>
+              </div>
+            ) : filteredServices.length > 0 ? (
               <div className="services-results-grid">
                 {filteredServices.map(service => (
                   <ServiceCard 

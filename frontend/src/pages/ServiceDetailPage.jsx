@@ -20,14 +20,18 @@ import './ServiceDetailPage.css';
 
 const ServiceDetailPage = () => {
   const { id } = useParams();
-  const { services, providers, reviews, addReview } = useMarketplace();
+  const { services, providers, reviews, addReview, loading } = useMarketplace();
   const { user } = useAuth();
 
-  const service = services.find(s => String(s.id) === String(id)) || services[0];
+  const service = services.find(s => String(s.id) === String(id)) || (!loading ? services[0] : null);
   const provider = providers.find(p => String(p.id) === String(service?.providerId)) || providers[0];
 
   // Reviews for this service
-  const serviceReviews = reviews.filter(r => r.serviceName === service?.name || r.providerName === service?.providerName);
+  const serviceReviews = reviews.filter(r => 
+    String(r.serviceId) === String(service?.id) || 
+    r.serviceName === service?.name || 
+    r.providerName === service?.providerName
+  );
 
   // Booking modal
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -36,25 +40,40 @@ const ServiceDetailPage = () => {
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewError, setReviewError] = useState('');
 
-  const handleReviewSubmit = (e) => {
+  const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
+    setReviewError('');
 
-    addReview({
-      serviceId: service.id,
-      serviceName: service.name,
-      providerName: service.providerName,
-      userName: user ? user.name : 'Verified Pet Parent',
-      userCity: user?.city || 'Bengaluru',
-      rating: Number(newRating),
-      comment: newComment.trim()
-    });
+    try {
+      await addReview({
+        serviceId: service.id,
+        serviceName: service.name,
+        providerId: service.providerId,
+        providerName: service.providerName,
+        userName: user ? user.name : 'Verified Pet Parent',
+        userCity: user?.city || 'Bengaluru',
+        rating: Number(newRating),
+        comment: newComment.trim()
+      });
 
-    setNewComment('');
-    setReviewSubmitted(true);
-    setTimeout(() => setReviewSubmitted(false), 4000);
+      setNewComment('');
+      setReviewSubmitted(true);
+      setTimeout(() => setReviewSubmitted(false), 4000);
+    } catch (err) {
+      setReviewError(err.message || 'Failed to submit review.');
+    }
   };
+
+  if (loading && !service) {
+    return (
+      <div className="container section text-center" style={{ padding: '6rem 1rem' }}>
+        <p>Loading service details from Supabase...</p>
+      </div>
+    );
+  }
 
   if (!service) {
     return (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useMarketplace } from '../context/MarketplaceContext';
+import { uploadStorageFile } from '../lib/supabase';
 import { CATEGORIES } from '../services/mockData';
 import { 
   Building, 
@@ -45,32 +46,39 @@ const ProviderDashboardPage = () => {
   const [newPrice, setNewPrice] = useState(850);
   const [newDuration, setNewDuration] = useState('45 mins');
   const [newDesc, setNewDesc] = useState('');
+  const [serviceImage, setServiceImage] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
-  const handleCreateService = (e) => {
+  const handleCreateService = async (e) => {
     e.preventDefault();
     const catObj = CATEGORIES.find(c => c.id === newCategory);
 
-    addService({
-      name: newServiceName,
-      category: newCategory,
-      categoryName: catObj ? catObj.name : 'Care Service',
-      providerId: currentProviderId,
-      providerName: user?.name || 'Dr. Aarav Sharma',
-      businessName: user?.businessName || 'Paws & Claws Veterinary Wellness',
-      city: user?.city || 'Bengaluru',
-      area: 'Indiranagar',
-      price: Number(newPrice),
-      priceUnit: 'per session',
-      duration: newDuration,
-      image: catObj ? catObj.image : 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=800&q=80',
-      description: newDesc,
-      included: ['Professional clinic evaluation', 'Personalized care advice', 'Digital health summary'],
-      availableSlots: ['10:00 AM', '01:00 PM', '04:00 PM', '06:00 PM']
-    });
+    try {
+      await addService({
+        name: newServiceName,
+        category: newCategory,
+        categoryName: catObj ? catObj.name : 'Care Service',
+        providerId: currentProviderId,
+        providerName: user?.name || 'Dr. Aarav Sharma',
+        businessName: user?.businessName || 'Paws & Claws Veterinary Wellness',
+        city: user?.city || 'Bengaluru',
+        area: 'Indiranagar',
+        price: Number(newPrice),
+        priceUnit: 'per session',
+        duration: newDuration,
+        image: serviceImage || (catObj ? catObj.image : 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=800&q=80'),
+        description: newDesc,
+        included: ['Professional clinic evaluation', 'Personalized care advice', 'Digital health summary'],
+        availableSlots: ['10:00 AM', '01:00 PM', '04:00 PM', '06:00 PM']
+      });
 
-    setShowAddModal(false);
-    setNewServiceName('');
-    setNewDesc('');
+      setShowAddModal(false);
+      setNewServiceName('');
+      setNewDesc('');
+      setServiceImage('');
+    } catch (err) {
+      alert(err.message || 'Failed to create service listing.');
+    }
   };
 
   return (
@@ -299,11 +307,35 @@ const ProviderDashboardPage = () => {
                   />
                 </div>
 
+                <div className="form-group">
+                  <label className="form-label">Service Image (Optional)</label>
+                  <input 
+                    type="file" 
+                    className="form-control"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      try {
+                        setUploadingImage(true);
+                        const url = await uploadStorageFile('service-images', file, 'services');
+                        setServiceImage(url);
+                      } catch (err) {
+                        console.warn('Storage upload notice:', err);
+                      } finally {
+                        setUploadingImage(false);
+                      }
+                    }}
+                  />
+                  {uploadingImage && <small style={{ color: 'var(--primary)' }}>Uploading to service-images bucket...</small>}
+                  {serviceImage && <small style={{ color: 'var(--accent-secondary)' }}>✓ Image uploaded successfully</small>}
+                </div>
+
                 <div className="form-btn-actions">
                   <button type="button" className="btn btn-outline" onClick={() => setShowAddModal(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary">
+                  <button type="submit" className="btn btn-primary" disabled={uploadingImage}>
                     Publish Service
                   </button>
                 </div>

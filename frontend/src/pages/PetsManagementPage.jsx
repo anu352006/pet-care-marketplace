@@ -37,9 +37,12 @@ const PetsManagementPage = () => {
   const [vaccinations, setVaccinations] = useState('');
   const [medicalHistory, setMedicalHistory] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const openAddModal = () => {
     setEditingPet(null);
+    setFormError('');
     setName('');
     setType('Dog');
     setBreed('');
@@ -54,6 +57,7 @@ const PetsManagementPage = () => {
 
   const openEditModal = (pet) => {
     setEditingPet(pet);
+    setFormError('');
     setName(pet.name);
     setType(pet.type);
     setBreed(pet.breed);
@@ -69,12 +73,14 @@ const PetsManagementPage = () => {
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setFormError('');
     try {
       setUploadingPhoto(true);
       const uploadedUrl = await uploadStorageFile('pet-images', file, 'pets');
       setPhoto(uploadedUrl);
     } catch (err) {
       console.warn('Storage upload error:', err);
+      setFormError('Failed to upload image to storage. Make sure your Supabase project is reachable.');
     } finally {
       setUploadingPhoto(false);
     }
@@ -82,6 +88,9 @@ const PetsManagementPage = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    setFormError('');
+    setIsSaving(true);
+
     const petPayload = {
       name,
       type,
@@ -96,13 +105,18 @@ const PetsManagementPage = () => {
       medicalHistory
     };
 
-    if (editingPet) {
-      await updatePet(editingPet.id, petPayload);
-    } else {
-      await addPet(petPayload);
+    try {
+      if (editingPet) {
+        await updatePet(editingPet.id, petPayload);
+      } else {
+        await addPet(petPayload);
+      }
+      setShowModal(false);
+    } catch (err) {
+      setFormError(err.message || 'Failed to save pet profile.');
+    } finally {
+      setIsSaving(false);
     }
-
-    setShowModal(false);
   };
 
   const handleDelete = async (id) => {
@@ -129,8 +143,22 @@ const PetsManagementPage = () => {
 
         {/* Pets Grid */}
         <div className="pets-grid">
-          {pets.map(pet => (
-            <div key={pet.id} className="pet-profile-card card">
+          {pets.length === 0 ? (
+            <div className="empty-results-card card" style={{ gridColumn: '1 / -1', padding: '3rem 1.5rem', textAlign: 'center' }}>
+              <div className="empty-icon-wrap" style={{ margin: '0 auto 1rem' }}>
+                <Heart size={36} className="text-accent" />
+              </div>
+              <h3>No Registered Pets Yet</h3>
+              <p style={{ maxWidth: '480px', margin: '0 auto 1.5rem', color: 'var(--text-muted)' }}>
+                Add your companion's profile to book appointments, track medical passports, and receive personalized AI health recommendations.
+              </p>
+              <button className="btn btn-primary" onClick={openAddModal}>
+                <Plus size={18} /> Register First Pet
+              </button>
+            </div>
+          ) : (
+            pets.map(pet => (
+              <div key={pet.id} className="pet-profile-card card">
               <div className="pet-card-media">
                 <img src={pet.photo} alt={pet.name} className="pet-img-cover" />
                 <span className="pet-type-tag">{pet.type}</span>
@@ -195,7 +223,7 @@ const PetsManagementPage = () => {
                 </div>
               </div>
             </div>
-          ))}
+          )))}
         </div>
 
         {/* Delete Confirmation Modal */}
@@ -231,6 +259,13 @@ const PetsManagementPage = () => {
                 <h2>{editingPet ? 'Update Pet Profile' : 'Register New Pet'}</h2>
                 <p>Provide accurate information to help veterinarians and groomers customize care.</p>
               </div>
+
+              {formError && (
+                <div className="alert alert-danger" style={{ marginBottom: '1.25rem' }}>
+                  <AlertTriangle size={18} />
+                  <span>{formError}</span>
+                </div>
+              )}
 
               <form onSubmit={handleSave} className="pet-edit-form">
                 <div className="form-row-2">
@@ -365,8 +400,8 @@ const PetsManagementPage = () => {
                   <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary">
-                    {editingPet ? 'Save Changes' : 'Register Pet'}
+                  <button type="submit" className="btn btn-primary" disabled={isSaving || uploadingPhoto}>
+                    {isSaving ? 'Saving...' : editingPet ? 'Save Changes' : 'Register Pet'}
                   </button>
                 </div>
               </form>

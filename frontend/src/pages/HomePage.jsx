@@ -25,7 +25,7 @@ import {
 import './HomePage.css';
 
 const HomePage = () => {
-  const { services } = useMarketplace();
+  const { services, reviews } = useMarketplace();
   const navigate = useNavigate();
 
   // Search state
@@ -390,21 +390,21 @@ const HomePage = () => {
           </div>
 
           <div className="testimonials-grid">
-            {SAMPLE_REVIEWS.map(rev => (
+            {(reviews && reviews.length > 0 ? reviews.slice(0, 3) : SAMPLE_REVIEWS).map(rev => (
               <div key={rev.id} className="testimonial-card card">
                 <div className="testimonial-stars">
-                  {[...Array(rev.rating)].map((_, i) => (
+                  {[...Array(rev.rating || 5)].map((_, i) => (
                     <Star key={i} size={16} className="star-gold" />
                   ))}
                 </div>
-                <p className="testimonial-text">"{rev.comment}"</p>
+                <p className="testimonial-text">"{rev.comment || rev.review}"</p>
                 <div className="testimonial-author">
                   <div className="author-avatar-placeholder">
-                    {rev.userName[0]}
+                    {(rev.userName || 'P')[0]}
                   </div>
                   <div>
-                    <strong>{rev.userName}</strong>
-                    <span>{rev.userCity} • Booked with {rev.providerName}</span>
+                    <strong>{rev.userName || 'Verified Parent'}</strong>
+                    <span>{rev.userCity || 'Bengaluru'} • Booked with {rev.providerName || 'Specialist'}</span>
                   </div>
                 </div>
               </div>

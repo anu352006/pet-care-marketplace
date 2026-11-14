@@ -48,7 +48,7 @@ const AdminDashboardPage = () => {
           </div>
           <div className="admin-system-status">
             <span className="status-live-dot"></span>
-            <span>All Systems Operational (Spring Boot + MySQL Ready)</span>
+            <span>All Systems Operational (Supabase PostgreSQL Connected)</span>
           </div>
         </div>
 
