@@ -5,7 +5,7 @@ export const CATEGORIES = [
     slug: 'veterinary-consultation',
     icon: 'Stethoscope',
     description: 'Expert medical health checks, clinical advice & vaccinations.',
-    image: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=600&q=80',
+    image: '/images/services/service-vet-exam.jpg',
     count: '24+ Clinics'
   },
   {
@@ -14,7 +14,7 @@ export const CATEGORIES = [
     slug: 'pet-grooming',
     icon: 'Scissors',
     description: 'Deep baths, styling, hair trimming, nail clipping & aromatic spas.',
-    image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=600&q=80',
+    image: '/images/services/service-grooming-spa.jpg',
     count: '38+ Salons'
   },
   {
@@ -23,7 +23,7 @@ export const CATEGORIES = [
     slug: 'pet-boarding',
     icon: 'Home',
     description: 'Safe overnight stays, temperature-controlled rooms & 24/7 care.',
-    image: 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?auto=format&fit=crop&w=600&q=80',
+    image: '/images/services/service-boarding-suite.jpg',
     count: '19+ Resorts'
   },
   {
@@ -32,7 +32,7 @@ export const CATEGORIES = [
     slug: 'pet-walking',
     icon: 'Footprints',
     description: 'Energetic daily neighborhood strolls with GPS track updates.',
-    image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=600&q=80',
+    image: '/images/services/service-walking.jpg',
     count: '45+ Walkers'
   },
   {
@@ -41,7 +41,7 @@ export const CATEGORIES = [
     slug: 'pet-training',
     icon: 'Award',
     description: 'Obedience, puppy basics, leash handling and behavioral agility.',
-    image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=600&q=80',
+    image: '/images/services/service-training-puppy.jpg',
     count: '16+ Trainers'
   },
   {
@@ -50,7 +50,7 @@ export const CATEGORIES = [
     slug: 'pet-sitting',
     icon: 'HeartHandshake',
     description: 'Loving, stress-free sitting in the comfort of your own home.',
-    image: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=600&q=80',
+    image: '/images/services/service-sitting.jpg',
     count: '29+ Sitters'
   },
   {
@@ -59,7 +59,7 @@ export const CATEGORIES = [
     slug: 'pet-daycare',
     icon: 'Smile',
     description: 'Supervised social fun, agility exercises, naps and playtime.',
-    image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80',
+    image: '/images/services/service-daycare-play.jpg',
     count: '21+ Centers'
   },
   {
@@ -68,7 +68,7 @@ export const CATEGORIES = [
     slug: 'pet-taxi',
     icon: 'Car',
     description: 'Air-conditioned pet ambulances and comfy door-to-door rides.',
-    image: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?auto=format&fit=crop&w=600&q=80',
+    image: '/images/services/service-taxi-cab.jpg',
     count: '12+ Fleets'
   }
 ];
@@ -86,7 +86,7 @@ export const PROVIDERS = [
     rating: 4.9,
     reviewsCount: 142,
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=400&q=80',
+    avatar: '/images/providers/provider-aarav.jpg',
     bio: 'Experienced veterinarian with 12+ years of clinical expertise in canine medicine, feline diagnostics, and preventive surgical wellness.',
     experienceYears: 12,
     servicesCount: 3
@@ -103,7 +103,7 @@ export const PROVIDERS = [
     rating: 4.8,
     reviewsCount: 98,
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80',
+    avatar: '/images/providers/provider-pooja.jpg',
     bio: 'Certified master pet stylist specializing in breed-specific haircuts, medicated organic baths, and stress-free feline grooming.',
     experienceYears: 8,
     servicesCount: 3
@@ -120,7 +120,7 @@ export const PROVIDERS = [
     rating: 4.7,
     reviewsCount: 84,
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
+    avatar: '/images/providers/provider-rohan.jpg',
     bio: 'Pioneered eco-friendly pet stays featuring 2 acres of grassy play paddocks, splash pools, and individual climate-regulated suites.',
     experienceYears: 7,
     servicesCount: 2
@@ -137,7 +137,7 @@ export const PROVIDERS = [
     rating: 4.9,
     reviewsCount: 116,
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80',
+    avatar: '/images/providers/provider-vikram.jpg',
     bio: 'Certified positive-reinforcement behaviorist. Specializes in leash reactivity, puppy developmental socialization, and agility coaching.',
     experienceYears: 10,
     servicesCount: 2
@@ -154,7 +154,7 @@ export const PROVIDERS = [
     rating: 4.9,
     reviewsCount: 73,
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=400&q=80',
+    avatar: '/images/providers/provider-ananya.jpg',
     bio: 'Dedicated animal behavior enthusiast providing trustworthy neighborhood walks, in-home companionship, and puppy play sessions.',
     experienceYears: 5,
     servicesCount: 3
@@ -171,7 +171,7 @@ export const PROVIDERS = [
     rating: 4.8,
     reviewsCount: 62,
     verified: true,
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=400&q=80',
+    avatar: '/images/providers/provider-karthik.jpg',
     bio: 'Certified animal transporter running sanitized, cage-secured, air-conditioned vehicles for clinic visits, airports, and relocations.',
     experienceYears: 6,
     servicesCount: 2
@@ -195,7 +195,7 @@ export const SERVICES = [
     rating: 4.9,
     reviewsCount: 78,
     featured: true,
-    image: 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-vet-exam.jpg',
     description: 'Thorough nose-to-tail physical exam, vital signs check, nutritional advice, dental assessment, and tailored wellness counseling for dogs and cats of all ages.',
     included: [
       'Cardiopulmonary and respiratory examination',
@@ -221,7 +221,7 @@ export const SERVICES = [
     rating: 4.9,
     reviewsCount: 64,
     featured: false,
-    image: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-vaccination.jpg',
     description: 'Full core immunizations (DHPPi/Rabies for dogs or Tricat/Rabies for cats) combined with deworming and vaccination passport updates.',
     included: [
       'Core vaccine administration by licensed vet',
@@ -247,7 +247,7 @@ export const SERVICES = [
     rating: 4.8,
     reviewsCount: 68,
     featured: true,
-    image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-grooming-spa.jpg',
     description: 'Premium hydro-massage bath with natural botanical conditioning shampoo, full-body breed haircut, blow-dry, ear cleansing, and nail grinding.',
     included: [
       'Double organic wash with hypoallergenic conditioner',
@@ -273,7 +273,7 @@ export const SERVICES = [
     rating: 4.7,
     reviewsCount: 30,
     featured: false,
-    image: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-grooming-flea.jpg',
     description: 'Specialized medicated therapeutic rinse to eliminate parasites, soothe irritated dermis, and safeguard skin barrier health.',
     included: [
       'Herbal anti-parasitic treatment soak',
@@ -299,7 +299,7 @@ export const SERVICES = [
     rating: 4.8,
     reviewsCount: 52,
     featured: true,
-    image: 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-boarding-suite.jpg',
     description: 'Private temperature-controlled suites, orthopaedic beds, scheduled meal times, supervised playtime in lawn paddocks, and live webcam access for parents.',
     included: [
       'Private air-conditioned suite with orthopedic bedding',
@@ -325,7 +325,7 @@ export const SERVICES = [
     rating: 4.7,
     reviewsCount: 32,
     featured: false,
-    image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-daycare-play.jpg',
     description: 'Supervised daytime playground with obstacle tunnels, splash pads, ball pits, and cozy nap stations for happy, tired pets.',
     included: [
       'Behaviorally screened group play',
@@ -351,7 +351,7 @@ export const SERVICES = [
     rating: 4.9,
     reviewsCount: 45,
     featured: true,
-    image: 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-walking.jpg',
     description: 'Brisk, invigorating neighborhood walk focused on healthy exercise, sniffing stimulation, leash manners, and waste cleanup.',
     included: [
       'Individual 1-on-1 walk with dedicated walker',
@@ -377,7 +377,7 @@ export const SERVICES = [
     rating: 4.9,
     reviewsCount: 71,
     featured: true,
-    image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-training-puppy.jpg',
     description: 'Science-backed, positive-reinforcement training covering sit, stay, recall, potty training, impulse control, and biting deterrence for pups under 9 months.',
     included: [
       'In-person 1-on-1 sessions at your residence',
@@ -403,7 +403,7 @@ export const SERVICES = [
     rating: 4.8,
     reviewsCount: 45,
     featured: false,
-    image: 'https://images.unsplash.com/photo-1534361960057-19889db9621e?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-training-leash.jpg',
     description: 'Targeted behavioral modification for dogs showing fear, barking, or lunging at passing vehicles, other dogs, or strangers on walks.',
     included: [
       'Root cause trigger threshold analysis',
@@ -429,7 +429,7 @@ export const SERVICES = [
     rating: 4.9,
     reviewsCount: 28,
     featured: false,
-    image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-sitting.jpg',
     description: 'Caring pet sitting in your own home. Ideal for anxious dogs and cats who prefer their familiar environment while you are at work or travelling.',
     included: [
       'Food, fresh water, and treat replenishment',
@@ -455,7 +455,7 @@ export const SERVICES = [
     rating: 4.8,
     reviewsCount: 40,
     featured: true,
-    image: 'https://images.unsplash.com/photo-1544568100-847a948585b9?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-taxi-cab.jpg',
     description: 'Stress-free, sanitized, AC vehicle equipped with pet safety harnesses, ramp access, and protective seat covers for vet visits and airport drops.',
     included: [
       'Spacious sanitised vehicle with pet partition',
@@ -481,7 +481,7 @@ export const SERVICES = [
     rating: 4.9,
     reviewsCount: 22,
     featured: false,
-    image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?auto=format&fit=crop&w=800&q=80',
+    image: '/images/services/service-emergency-ambulance.jpg',
     description: 'Rapid-dispatch pet ambulance equipped with oxygen concentrator, stretcher cot, and medical assistance to reach top veterinary emergency hospitals.',
     included: [
       'High-priority urgent vehicle dispatch',
@@ -493,6 +493,17 @@ export const SERVICES = [
   }
 ];
 
+export const PET_TYPES = [
+  { id: 'Dog', name: 'Dog', icon: '🐕', defaultPhoto: '/images/pets/pet-dog-golden.jpg' },
+  { id: 'Cat', name: 'Cat', icon: '🐈', defaultPhoto: '/images/pets/pet-cat-persian.jpg' },
+  { id: 'Bird', name: 'Bird / Avian', icon: '🦜', defaultPhoto: '/images/pets/pet-bird-cockatiel.jpg' },
+  { id: 'Rabbit', name: 'Rabbit / Bunny', icon: '🐇', defaultPhoto: '/images/pets/pet-rabbit-lop.jpg' },
+  { id: 'Hamster', name: 'Hamster & Small Pets', icon: '🐹', defaultPhoto: '/images/pets/pet-hamster-syrian.jpg' },
+  { id: 'Fish', name: 'Fish & Aquatics', icon: '🐠', defaultPhoto: '/images/pets/pet-fish-aquarium.jpg' },
+  { id: 'Turtle', name: 'Turtle & Reptiles', icon: '🐢', defaultPhoto: '/images/pets/pet-turtle-slider.jpg' },
+  { id: 'Other', name: 'Other Companion', icon: '🐾', defaultPhoto: '/images/pets/pet-dog-beagle.jpg' }
+];
+
 export const SAMPLE_PETS = [
   {
     id: 1,
@@ -502,7 +513,7 @@ export const SAMPLE_PETS = [
     age: 3,
     gender: 'Male',
     weight: '31 kg',
-    photo: 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=600&q=80',
+    photo: '/images/pets/pet-dog-golden.jpg',
     vaccinations: 'Rabies (Valid till Dec 2026), DHPPi (Valid till Oct 2026), Kennel Cough (Up to date)',
     medicalHistory: 'Mild chicken protein allergy. Regular ear cleaning required.',
     ownerId: 10
@@ -515,7 +526,7 @@ export const SAMPLE_PETS = [
     age: 2,
     gender: 'Female',
     weight: '4.2 kg',
-    photo: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80',
+    photo: '/images/pets/pet-cat-persian.jpg',
     vaccinations: 'Tricat Core (Valid till Aug 2026), Rabies (Valid till Nov 2026)',
     medicalHistory: 'Requires daily grooming to prevent coat mats. Sensitive digestion.',
     ownerId: 10
@@ -528,9 +539,74 @@ export const SAMPLE_PETS = [
     age: 1,
     gender: 'Male',
     weight: '12 kg',
-    photo: 'https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?auto=format&fit=crop&w=600&q=80',
+    photo: '/images/pets/pet-dog-beagle.jpg',
     vaccinations: 'Puppy Complete series done, Anti-rabies up to date',
     medicalHistory: 'Energetic and playful, no chronic medical issues.',
+    ownerId: 10
+  },
+  {
+    id: 4,
+    name: 'Kiwi',
+    type: 'Bird',
+    breed: 'Lutino Cockatiel',
+    age: 1,
+    gender: 'Female',
+    weight: '95 g',
+    photo: '/images/pets/pet-bird-cockatiel.jpg',
+    vaccinations: 'Avian Polyomavirus (Up to date)',
+    medicalHistory: 'Enjoys vocalizing in morning; requires seed-pellet balanced blend.',
+    ownerId: 10
+  },
+  {
+    id: 5,
+    name: 'Barnaby',
+    type: 'Rabbit',
+    breed: 'Holland Lop',
+    age: 2,
+    gender: 'Male',
+    weight: '1.8 kg',
+    photo: '/images/pets/pet-rabbit-lop.jpg',
+    vaccinations: 'RHDV2 Vaccine (Valid till 2027)',
+    medicalHistory: 'Timothy hay 80% diet essential for dental attrition health.',
+    ownerId: 10
+  },
+  {
+    id: 6,
+    name: 'Peanut',
+    type: 'Hamster',
+    breed: 'Syrian Teddy Bear',
+    age: 1,
+    gender: 'Male',
+    weight: '140 g',
+    photo: '/images/pets/pet-hamster-syrian.jpg',
+    vaccinations: 'Preventive parasite screen clean',
+    medicalHistory: 'Needs 10-inch running wheel and deep paper bedding for burrowing.',
+    ownerId: 10
+  },
+  {
+    id: 7,
+    name: 'Nemo & Coral',
+    type: 'Fish',
+    breed: 'Tropical Freshwater Betta & Tetras',
+    age: 1,
+    gender: 'Mixed',
+    weight: 'Aquarium',
+    photo: '/images/pets/pet-fish-aquarium.jpg',
+    vaccinations: 'Water quality bio-cycled (0 ppm Ammonia, 0 ppm Nitrite)',
+    medicalHistory: 'Heated tank maintained strictly at 26°C with low water flow.',
+    ownerId: 10
+  },
+  {
+    id: 8,
+    name: 'Shelldon',
+    type: 'Turtle',
+    breed: 'Red-Eared Slider',
+    age: 4,
+    gender: 'Male',
+    weight: '1.1 kg',
+    photo: '/images/pets/pet-turtle-slider.jpg',
+    vaccinations: 'Reptile calcium & metabolic bone check clear',
+    medicalHistory: 'Requires 12h UVB basking platform and water temperature at 25°C.',
     ownerId: 10
   }
 ];
@@ -594,6 +670,8 @@ export const SAMPLE_REVIEWS = [
     id: 1,
     userName: 'Kavita Nair',
     userCity: 'Bengaluru',
+    userAvatar: '/images/testimonials/user-kavita.jpg',
+    petPhoto: '/images/pets/pet-dog-golden.jpg',
     serviceName: 'Comprehensive Health & Wellness Exam',
     providerName: 'Dr. Aarav Sharma',
     rating: 5,
@@ -604,6 +682,8 @@ export const SAMPLE_REVIEWS = [
     id: 2,
     userName: 'Rahul Singhania',
     userCity: 'Mumbai',
+    userAvatar: '/images/testimonials/user-rahul.jpg',
+    petPhoto: '/images/pets/pet-cat-persian.jpg',
     serviceName: 'Royal Spa Bath & Full Body Grooming',
     providerName: 'Pooja Deshmukh',
     rating: 5,
@@ -614,11 +694,25 @@ export const SAMPLE_REVIEWS = [
     id: 3,
     userName: 'Sneha Patel',
     userCity: 'Gurugram',
+    userAvatar: '/images/testimonials/user-sneha.jpg',
+    petPhoto: '/images/pets/pet-rabbit-lop.jpg',
     serviceName: 'Luxury Suite Overnight Boarding',
     providerName: 'Rohan Mehra',
     rating: 5,
     date: 'October 15, 2026',
     comment: 'The live video updates gave my family complete peace of mind while we were away for 4 days. Happy Tails is genuinely the most hygienic and caring pet resort in NCR.'
+  },
+  {
+    id: 4,
+    userName: 'Arun Verma',
+    userCity: 'Pune',
+    userAvatar: '/images/testimonials/user-arun.jpg',
+    petPhoto: '/images/pets/pet-dog-beagle.jpg',
+    serviceName: 'Puppy Foundation & Basic Manners',
+    providerName: 'Vikram Joshi',
+    rating: 5,
+    date: 'October 8, 2026',
+    comment: 'Vikram transformed Coco from a leash-pulling terror into a calm, focused companion in just 6 lessons. His positive reinforcement technique is pure magic!'
   }
 ];
 

@@ -109,7 +109,12 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
                         className={`pet-picker-card ${String(selectedPetId) === String(p.id) ? 'active' : ''}`}
                         onClick={() => setSelectedPetId(p.id)}
                       >
-                        <img src={p.photo} alt={p.name} className="pet-picker-img" />
+                        <img 
+                          src={p.photo || '/images/pets/pet-dog-golden.jpg'} 
+                          alt={p.name} 
+                          className="pet-picker-img"
+                          onError={(e) => { e.target.src = '/images/pets/pet-dog-golden.jpg'; }}
+                        />
                         <div className="pet-picker-info">
                           <strong>{p.name}</strong>
                           <span>{p.breed} • {p.age} yr</span>

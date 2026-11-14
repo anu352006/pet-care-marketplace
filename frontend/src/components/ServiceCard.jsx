@@ -8,7 +8,13 @@ const ServiceCard = ({ service, onBookNow }) => {
     <div className="service-card card">
       {/* Service Image Banner with Badge Overlay */}
       <div className="service-img-container">
-        <img src={service.image} alt={service.name} className="service-card-img" />
+        <img 
+          src={service.image || '/images/services/service-vet-exam.jpg'} 
+          alt={service.name} 
+          className="service-card-img" 
+          loading="lazy"
+          onError={(e) => { e.target.src = '/images/services/service-vet-exam.jpg'; }}
+        />
         <div className="service-img-vignette"></div>
         <span className="category-pill-badge">{service.categoryName}</span>
         {service.featured && <span className="featured-pill-badge">Popular Choice</span>}

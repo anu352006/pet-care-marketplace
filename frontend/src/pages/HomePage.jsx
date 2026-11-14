@@ -111,10 +111,10 @@ const HomePage = () => {
             {/* Social Trust Metrics with Avatar Stack */}
             <div className="hero-trust-metrics">
               <div className="trust-avatars-stack">
-                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80" alt="Pet Parent" className="trust-avatar" />
-                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80" alt="Pet Parent" className="trust-avatar" />
-                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80" alt="Pet Parent" className="trust-avatar" />
-                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80" alt="Pet Parent" className="trust-avatar" />
+                <img src="/images/testimonials/user-kavita.jpg" alt="Pet Parent Kavita" className="trust-avatar" />
+                <img src="/images/testimonials/user-rahul.jpg" alt="Pet Parent Rahul" className="trust-avatar" />
+                <img src="/images/testimonials/user-sneha.jpg" alt="Pet Parent Sneha" className="trust-avatar" />
+                <img src="/images/testimonials/user-arun.jpg" alt="Pet Parent Arun" className="trust-avatar" />
               </div>
 
               <div className="trust-rating-block">
@@ -142,9 +142,10 @@ const HomePage = () => {
           <div className="hero-visual">
             <div className="hero-img-frame">
               <img 
-                src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=800&q=80" 
+                src="/images/hero/hero-banner.jpg" 
                 alt="Happy playful dog and kitten in green field" 
                 className="hero-main-img" 
+                loading="eager"
               />
               
               {/* Floating Hero Badges */}
@@ -283,6 +284,14 @@ const HomePage = () => {
               <span className="mockup-status-dot">Online</span>
             </div>
 
+            <div className="mockup-pet-banner">
+              <img src="/images/pets/pet-dog-golden.jpg" alt="Bruno the Golden Retriever" className="mockup-pet-thumb" />
+              <div>
+                <strong>Active Context: Bruno</strong>
+                <small>Golden Retriever • 3 yrs • Wellness Profile Active</small>
+              </div>
+            </div>
+
             <div className="mockup-chat-stream">
               <div className="chat-bubble user-bubble">
                 "My 3-year-old Golden Retriever Bruno suddenly skipped his morning breakfast. Should I worry?"
@@ -381,6 +390,105 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* 6.5. PET CARE LIFESTYLE & SPECIALTY GALLERY */}
+      <section className="section lifestyle-gallery-section">
+        <div className="container">
+          <div className="section-header">
+            <span className="section-tag">Care in Action</span>
+            <h2 className="section-title">Specialized Care for Every Companion</h2>
+            <p className="section-subtitle">
+              From gentle veterinary handling and soothing spa hydrobaths to daily fitness walks and loving boarding sanctuaries.
+            </p>
+          </div>
+
+          <div className="lifestyle-gallery-grid">
+            <div className="gallery-card card">
+              <div className="gallery-media">
+                <img src="/images/services/service-vet-exam.jpg" alt="Veterinary Consultation" className="gallery-img" loading="lazy" />
+                <span className="gallery-badge bg-sage">Veterinary Care</span>
+              </div>
+              <div className="gallery-content">
+                <h4>Clinical Wellness Exams</h4>
+                <p>Nose-to-tail diagnostics, vital signs tracking, and pediatric & senior pet preventative care.</p>
+                <Link to="/services?cat=vet" className="gallery-link">
+                  Consult Specialists <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            <div className="gallery-card card">
+              <div className="gallery-media">
+                <img src="/images/services/service-grooming-spa.jpg" alt="Pet Grooming & Spa" className="gallery-img" loading="lazy" />
+                <span className="gallery-badge bg-terracotta">Grooming & Spa</span>
+              </div>
+              <div className="gallery-content">
+                <h4>Royal Spa & Coat Styling</h4>
+                <p>Hydro-massage organic baths, breed-specific haircuts, nail trims, and medicated dermal therapy.</p>
+                <Link to="/services?cat=grooming" className="gallery-link">
+                  Book Spa Session <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            <div className="gallery-card card">
+              <div className="gallery-media">
+                <img src="/images/services/service-boarding-suite.jpg" alt="Pet Boarding Resort" className="gallery-img" loading="lazy" />
+                <span className="gallery-badge bg-sage">Resort Boarding</span>
+              </div>
+              <div className="gallery-content">
+                <h4>Luxury Overnight Suites</h4>
+                <p>Climate-controlled rooms, grassy play paddocks, 24/7 webcams, and round-the-clock loving care.</p>
+                <Link to="/services?cat=boarding" className="gallery-link">
+                  Reserve Suite <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            <div className="gallery-card card">
+              <div className="gallery-media">
+                <img src="/images/services/service-walking.jpg" alt="Dog Walking & Fitness" className="gallery-img" loading="lazy" />
+                <span className="gallery-badge bg-terracotta">Fitness & Walks</span>
+              </div>
+              <div className="gallery-content">
+                <h4>Daily Fitness Walks</h4>
+                <p>Energetic neighborhood strolls with real-time GPS tracking and dedicated 1-on-1 certified walkers.</p>
+                <Link to="/services?cat=walking" className="gallery-link">
+                  Schedule Walk <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            <div className="gallery-card card">
+              <div className="gallery-media">
+                <img src="/images/services/service-training-puppy.jpg" alt="Pet Behavior Training" className="gallery-img" loading="lazy" />
+                <span className="gallery-badge bg-sage">Positive Training</span>
+              </div>
+              <div className="gallery-content">
+                <h4>Behavioral Modification</h4>
+                <p>Certified positive-reinforcement coaching for puppy fundamentals, leash manners, and agility.</p>
+                <Link to="/services?cat=training" className="gallery-link">
+                  Meet Trainers <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+
+            <div className="gallery-card card">
+              <div className="gallery-media">
+                <img src="/images/services/service-sitting.jpg" alt="In-Home Pet Sitting" className="gallery-img" loading="lazy" />
+                <span className="gallery-badge bg-terracotta">In-Home Sitting</span>
+              </div>
+              <div className="gallery-content">
+                <h4>Compassionate Pet Sitting</h4>
+                <p>Stress-free sitting in your pet's own home with meals, play sessions, and continuous updates.</p>
+                <Link to="/services?cat=sitting" className="gallery-link">
+                  Find Sitters <ArrowRight size={14} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 7. CUSTOMER TESTIMONIALS */}
       <section className="section testimonials-section">
         <div className="container">
@@ -390,8 +498,8 @@ const HomePage = () => {
           </div>
 
           <div className="testimonials-grid">
-            {(reviews && reviews.length > 0 ? reviews.slice(0, 3) : SAMPLE_REVIEWS).map(rev => (
-              <div key={rev.id} className="testimonial-card card">
+            {(reviews && reviews.length > 0 ? reviews.slice(0, 4) : SAMPLE_REVIEWS).map((rev, idx) => (
+              <div key={rev.id || idx} className="testimonial-card card">
                 <div className="testimonial-stars">
                   {[...Array(rev.rating || 5)].map((_, i) => (
                     <Star key={i} size={16} className="star-gold" />
@@ -399,9 +507,12 @@ const HomePage = () => {
                 </div>
                 <p className="testimonial-text">"{rev.comment || rev.review}"</p>
                 <div className="testimonial-author">
-                  <div className="author-avatar-placeholder">
-                    {(rev.userName || 'P')[0]}
-                  </div>
+                  <img 
+                    src={rev.userAvatar || `/images/testimonials/user-${(idx % 4) + 1}.jpg`} 
+                    alt={rev.userName || 'Verified Parent'} 
+                    className="testimonial-avatar-img"
+                    onError={(e) => { e.target.src = '/images/testimonials/user-kavita.jpg'; }}
+                  />
                   <div>
                     <strong>{rev.userName || 'Verified Parent'}</strong>
                     <span>{rev.userCity || 'Bengaluru'} • Booked with {rev.providerName || 'Specialist'}</span>

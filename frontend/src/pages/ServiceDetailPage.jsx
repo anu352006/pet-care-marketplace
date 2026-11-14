@@ -98,7 +98,12 @@ const ServiceDetailPage = () => {
           <div className="detail-main-col">
             <div className="detail-hero-card card">
               <div className="detail-img-box">
-                <img src={service.image} alt={service.name} className="detail-main-img" />
+                <img 
+                  src={service.image || '/images/services/service-vet-exam.jpg'} 
+                  alt={service.name} 
+                  className="detail-main-img" 
+                  onError={(e) => { e.target.src = '/images/services/service-vet-exam.jpg'; }}
+                />
                 <span className="badge badge-primary detail-cat-badge">{service.categoryName}</span>
               </div>
 
@@ -138,7 +143,12 @@ const ServiceDetailPage = () => {
             {/* Provider Spotlight */}
             <div className="provider-spotlight-card card">
               <div className="provider-card-header">
-                <img src={provider.avatar} alt={provider.name} className="provider-avatar-lg" />
+                <img 
+                  src={provider.avatar || '/images/providers/provider-aarav.jpg'} 
+                  alt={provider.name} 
+                  className="provider-avatar-lg" 
+                  onError={(e) => { e.target.src = '/images/providers/provider-aarav.jpg'; }}
+                />
                 <div>
                   <div className="provider-name-row">
                     <h3>{provider.name}</h3>
@@ -232,7 +242,12 @@ const ServiceDetailPage = () => {
                     <div key={r.id} className="review-stream-item">
                       <div className="review-stream-top">
                         <div className="review-author-meta">
-                          <div className="author-avatar-sm">{r.userName[0]}</div>
+                          <img 
+                            src={r.userAvatar || `/images/testimonials/user-${((r.id || 1) % 4) + 1}.jpg`} 
+                            alt={r.userName} 
+                            className="author-avatar-sm-img"
+                            onError={(e) => { e.target.src = '/images/testimonials/user-kavita.jpg'; }}
+                          />
                           <div>
                             <strong>{r.userName}</strong>
                             <span className="author-city">{r.userCity}</span>

@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
     role: 'PET_OWNER',
     phone: '+91 98765 43210',
     city: 'Bengaluru',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+    avatar: '/images/testimonials/user-kavita.jpg',
   };
 
   const [user, setUser] = useState(() => {
@@ -75,6 +75,37 @@ export const AuthProvider = ({ children }) => {
         if (session?.user) {
           await fetchAndSetUserProfile(session.user);
           setToken(session.access_token);
+        } else {
+          // If no active auth session, resolve real demo user from public.users to get their database UUID
+          const { data: dbUser } = await supabase
+            .from('users')
+            .select(`
+              id,
+              full_name,
+              email,
+              role,
+              phone,
+              avatar_url,
+              providers (id, business_name, location, verified)
+            `)
+            .eq('email', 'priya.petowner@example.com')
+            .maybeSingle();
+
+          if (dbUser?.id) {
+            const prov = Array.isArray(dbUser.providers) ? dbUser.providers[0] : dbUser.providers;
+            setUser({
+              id: dbUser.id,
+              name: dbUser.full_name || 'Priya Sundaram',
+              email: dbUser.email,
+              role: mapRoleToFrontend(dbUser.role),
+              phone: dbUser.phone || '+91 98765 43210',
+              city: prov?.location || 'Bengaluru',
+              businessName: prov?.business_name || '',
+              avatar: dbUser.avatar_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+              providerId: prov?.id || null,
+              verified: prov?.verified || false
+            });
+          }
         }
       } catch (err) {
         console.warn('Supabase session load error:', err);
@@ -181,7 +212,7 @@ export const AuthProvider = ({ children }) => {
         email: email || 'admin@petcare.org',
         role: 'ADMIN',
         city: 'Bengaluru',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80',
+        avatar: '/images/testimonials/user-arun.jpg',
       };
     } else if (requestedRole === 'SERVICE_PROVIDER' || email.includes('provider') || email.includes('vet')) {
       mockUser = {
@@ -193,7 +224,7 @@ export const AuthProvider = ({ children }) => {
         city: 'Bengaluru',
         providerId: 'pr-001',
         verified: true,
-        avatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=400&q=80',
+        avatar: '/images/providers/provider-aarav.jpg',
       };
     } else {
       mockUser = {
@@ -203,7 +234,7 @@ export const AuthProvider = ({ children }) => {
         role: 'PET_OWNER',
         phone: '+91 98765 43210',
         city: 'Bengaluru',
-        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
+        avatar: '/images/testimonials/user-kavita.jpg',
       };
     }
 
@@ -264,7 +295,7 @@ export const AuthProvider = ({ children }) => {
             phone: userData.phone || '',
             city: userData.city || 'Bengaluru',
             businessName: userData.businessName || '',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80'
+            avatar: '/images/testimonials/user-kavita.jpg'
           };
           setUser(registered);
           return { success: true, user: registered };
@@ -283,7 +314,7 @@ export const AuthProvider = ({ children }) => {
       phone: userData.phone || '+91 99000 00000',
       city: userData.city || 'Bengaluru',
       businessName: userData.businessName || '',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=400&q=80',
+      avatar: '/images/testimonials/user-kavita.jpg',
     };
 
     setUser(newUser);
@@ -310,14 +341,61 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Instant demo role switcher for UI review
-  const switchRole = (newRole) => {
+  const switchRole = async (newRole) => {
+    let targetEmail = 'priya.petowner@example.com';
+    let targetPass = 'OwnerPass123!';
+    let targetRole = 'PET_OWNER';
+
     if (newRole === 'ADMIN') {
-      login('admin@petcare.org', 'admin123', 'ADMIN');
+      targetEmail = 'admin@petcare.org';
+      targetPass = 'AdminPass123!';
+      targetRole = 'ADMIN';
     } else if (newRole === 'SERVICE_PROVIDER') {
-      login('aarav.vet@example.com', 'provider123', 'SERVICE_PROVIDER');
-    } else {
-      login('priya.petowner@example.com', 'owner123', 'PET_OWNER');
+      targetEmail = 'aarav.vet@example.com';
+      targetPass = 'ProviderPass123!';
+      targetRole = 'SERVICE_PROVIDER';
     }
+
+    if (isSupabaseConfigured()) {
+      // 1. Try signing in with Supabase Auth credentials
+      const res = await login(targetEmail, targetPass, targetRole);
+      if (res && res.success) return res;
+
+      // 2. Fallback: look up user in public.users to get their database UUID
+      const { data: dbUser } = await supabase
+        .from('users')
+        .select(`
+          id,
+          full_name,
+          email,
+          role,
+          phone,
+          avatar_url,
+          providers (id, business_name, location, verified)
+        `)
+        .eq('email', targetEmail)
+        .maybeSingle();
+
+      if (dbUser?.id) {
+        const prov = Array.isArray(dbUser.providers) ? dbUser.providers[0] : dbUser.providers;
+        const switched = {
+          id: dbUser.id,
+          name: dbUser.full_name || (newRole === 'ADMIN' ? 'System Administrator' : newRole === 'SERVICE_PROVIDER' ? 'Dr. Aarav Sharma' : 'Priya Sundaram'),
+          email: dbUser.email,
+          role: mapRoleToFrontend(dbUser.role),
+          phone: dbUser.phone || '',
+          city: prov?.location || 'Bengaluru',
+          businessName: prov?.business_name || '',
+          avatar: dbUser.avatar_url || (newRole === 'SERVICE_PROVIDER' ? '/images/providers/provider-aarav.jpg' : newRole === 'ADMIN' ? '/images/testimonials/user-arun.jpg' : '/images/testimonials/user-kavita.jpg'),
+          providerId: prov?.id || null,
+          verified: prov?.verified || false
+        };
+        setUser(switched);
+        return { success: true, user: switched };
+      }
+    }
+
+    return login(targetEmail, targetPass, targetRole);
   };
 
   const logout = async () => {

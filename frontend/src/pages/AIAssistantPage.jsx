@@ -162,7 +162,13 @@ const AIAssistantPage = () => {
         <div className="ai-chat-header card">
           <div className="header-info-box">
             <div className="ai-avatar-badge">
-              <Sparkles size={24} className="sparkle-gold" />
+              <img 
+                src="/images/common/ai-assistant.jpg" 
+                alt="AI Pet Assistant" 
+                className="ai-avatar-photo" 
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
+              <Sparkles size={16} className="sparkle-gold ai-badge-icon" />
             </div>
             <div>
               <div className="ai-title-row">
@@ -172,7 +178,7 @@ const AIAssistantPage = () => {
                 </span>
               </div>
               <p className="ai-subtitle">
-                Guidance on nutrition, grooming, preventive vaccines, and pet wellness.
+                Guidance on nutrition, grooming, preventive vaccines, and companion wellness.
               </p>
             </div>
           </div>
@@ -180,18 +186,27 @@ const AIAssistantPage = () => {
           {/* Context Selector: Choose Registered Pet */}
           {pets.length > 0 && (
             <div className="pet-context-selector">
-              <label className="context-label">Personalize for Pet:</label>
-              <select 
-                className="form-control context-select"
-                value={selectedPetId}
-                onChange={e => setSelectedPetId(e.target.value)}
-              >
-                {pets.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.breed}, {p.age}y)
-                  </option>
-                ))}
-              </select>
+              {activePet && (
+                <img 
+                  src={activePet.photo || '/images/pets/pet-dog-golden.jpg'} 
+                  alt={activePet.name} 
+                  className="active-pet-chat-thumb" 
+                />
+              )}
+              <div className="pet-select-wrap">
+                <label className="context-label">Personalize for Companion:</label>
+                <select 
+                  className="form-control context-select"
+                  value={selectedPetId}
+                  onChange={e => setSelectedPetId(e.target.value)}
+                >
+                  {pets.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.type} - {p.breed}, {p.age}y)
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 

@@ -161,7 +161,12 @@ const Navbar = () => {
                     className="avatar-btn" 
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   >
-                    <img src={user.avatar} alt={user.name} className="user-avatar-img" />
+                    <img 
+                      src={user.avatar || '/images/testimonials/user-kavita.jpg'} 
+                      alt={user.name} 
+                      className="user-avatar-img"
+                      onError={(e) => { e.target.src = '/images/testimonials/user-kavita.jpg'; }}
+                    />
                     <span className="user-firstname">{user.name.split(' ')[0]}</span>
                     <ChevronDown size={14} />
                   </button>

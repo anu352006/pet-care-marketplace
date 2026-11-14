@@ -27,15 +27,28 @@
 }
 
 .ai-avatar-badge {
-  width: 56px;
-  height: 56px;
+  width: 58px;
+  height: 58px;
   border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, #132E1B 0%, #24522F 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #FFFFFF;
+  position: relative;
+  overflow: hidden;
   box-shadow: 0 4px 14px rgba(19, 46, 27, 0.2);
+  flex-shrink: 0;
+}
+
+.ai-avatar-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ai-badge-icon {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  background: var(--color-primary-dark);
+  border-radius: 50%;
+  padding: 2px;
 }
 
 .sparkle-gold {
@@ -77,6 +90,15 @@
   padding: 0.55rem 0.95rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+}
+
+.active-pet-chat-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-primary);
+  flex-shrink: 0;
 }
 
 .context-label {

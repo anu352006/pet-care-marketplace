@@ -34,6 +34,22 @@
   flex-wrap: wrap;
 }
 
+.welcome-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-shrink: 0;
+}
+
+.welcome-lifestyle-badge-img {
+  width: 140px;
+  height: 90px;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+  box-shadow: var(--shadow-sm);
+  border: 2px solid #FFFFFF;
+}
+
 .primary-pet-pill {
   display: flex;
   align-items: center;

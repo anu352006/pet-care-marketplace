@@ -574,6 +574,38 @@
   display: inline-block;
 }
 
+.mockup-pet-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: var(--color-surface-alt);
+  padding: 0.65rem 0.95rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 0.85rem;
+  border: 1px solid var(--border-color);
+}
+
+.mockup-pet-thumb {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-primary);
+  flex-shrink: 0;
+}
+
+.mockup-pet-banner strong {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-primary-dark);
+}
+
+.mockup-pet-banner small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
 .mockup-chat-stream {
   display: flex;
   flex-direction: column;
@@ -739,6 +771,16 @@
   gap: 0.95rem;
 }
 
+.testimonial-avatar-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-primary-light);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
 .author-avatar-placeholder {
   width: 46px;
   height: 46px;
@@ -804,6 +846,95 @@
   flex-wrap: wrap;
 }
 
+/* 6.5. PET CARE LIFESTYLE & SPECIALTY GALLERY */
+.lifestyle-gallery-section {
+  background: linear-gradient(180deg, var(--color-bg) 0%, #F5F8F4 100%);
+  padding: 5rem 0;
+}
+
+.lifestyle-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.gallery-card {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  background: #FFFFFF;
+}
+
+.gallery-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.gallery-media {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+}
+
+.gallery-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.gallery-card:hover .gallery-img {
+  transform: scale(1.06);
+}
+
+.gallery-badge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-xs);
+}
+
+.gallery-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.gallery-content h4 {
+  font-size: 1.15rem;
+  margin-bottom: 0.45rem;
+  color: var(--color-primary-dark);
+}
+
+.gallery-content p {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  margin-bottom: 1.15rem;
+  flex: 1;
+}
+
+.gallery-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  transition: gap var(--transition-fast);
+}
+
+.gallery-link:hover {
+  gap: 0.65rem;
+  color: var(--color-accent);
+}
+
 /* RESPONSIVE DESIGN */
 @media (max-width: 1024px) {
   .hero-container {
@@ -829,6 +960,9 @@
     grid-template-columns: repeat(2, 1fr);
   }
   .features-quad-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lifestyle-gallery-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .ai-promo-container {
@@ -859,6 +993,9 @@
     grid-template-columns: 1fr;
   }
   .steps-grid {
+    grid-template-columns: 1fr;
+  }
+  .lifestyle-gallery-grid {
     grid-template-columns: 1fr;
   }
   .testimonials-grid {

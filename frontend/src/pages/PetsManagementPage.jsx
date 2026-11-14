@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useMarketplace } from '../context/MarketplaceContext';
+import { useMarketplace, getPetTypeDefaultImage } from '../context/MarketplaceContext';
 import { uploadStorageFile } from '../services/supabaseClient';
+import { PET_TYPES } from '../services/mockData';
 import { 
   Heart, 
   Plus, 
@@ -14,12 +15,16 @@ import {
   Scale,
   Calendar,
   Sparkles,
-  Upload
+  Upload,
+  Filter
 } from 'lucide-react';
 import './PetsManagementPage.css';
 
 const PetsManagementPage = () => {
   const { pets, addPet, updatePet, deletePet } = useMarketplace();
+
+  // Filter state
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState('All');
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -97,10 +102,8 @@ const PetsManagementPage = () => {
       breed: breed || 'Mixed Breed',
       age: Number(age),
       gender,
-      weight: weight ? (weight.includes('kg') ? weight : `${weight} kg`) : '15 kg',
-      photo: photo || (type === 'Cat' 
-        ? 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80'
-        : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80'),
+      weight: weight ? (weight.includes('kg') || weight.includes('g') ? weight : `${weight} kg`) : '12 kg',
+      photo: photo || getPetTypeDefaultImage(type),
       vaccinations,
       medicalHistory
     };
@@ -124,6 +127,10 @@ const PetsManagementPage = () => {
     setDeleteConfirmId(null);
   };
 
+  const filteredPets = selectedTypeFilter === 'All' 
+    ? pets 
+    : pets.filter(p => (p.type || '').toLowerCase() === selectedTypeFilter.toLowerCase());
+
   return (
     <div className="pets-page section">
       <div className="container">
@@ -131,36 +138,66 @@ const PetsManagementPage = () => {
         <div className="pets-header-row">
           <div>
             <span className="section-tag">Pet Profile Management</span>
-            <h1 className="page-title">My Registered Pets</h1>
+            <h1 className="page-title">My Registered Companions</h1>
             <p className="page-subtitle">
-              Maintain healthcare passports, vaccination records, and dietary preferences for your companions.
+              Maintain healthcare passports, vaccination records, and dietary preferences for dogs, cats, birds, rabbits, and small companions.
             </p>
           </div>
           <button className="btn btn-primary" onClick={openAddModal}>
-            <Plus size={18} /> Add New Pet
+            <Plus size={18} /> Register Companion
           </button>
+        </div>
+
+        {/* Animal Species Filter Pills */}
+        <div className="pet-species-filter-bar">
+          <button 
+            className={`species-filter-pill ${selectedTypeFilter === 'All' ? 'active' : ''}`}
+            onClick={() => setSelectedTypeFilter('All')}
+          >
+            All Companions ({pets.length})
+          </button>
+          {PET_TYPES.map(pt => {
+            const count = pets.filter(p => (p.type || '').toLowerCase().includes(pt.id.toLowerCase())).length;
+            return (
+              <button 
+                key={pt.id}
+                className={`species-filter-pill ${selectedTypeFilter === pt.id ? 'active' : ''}`}
+                onClick={() => setSelectedTypeFilter(pt.id)}
+              >
+                <span>{pt.icon}</span> {pt.name} ({count})
+              </button>
+            );
+          })}
         </div>
 
         {/* Pets Grid */}
         <div className="pets-grid">
-          {pets.length === 0 ? (
+          {filteredPets.length === 0 ? (
             <div className="empty-results-card card" style={{ gridColumn: '1 / -1', padding: '3rem 1.5rem', textAlign: 'center' }}>
               <div className="empty-icon-wrap" style={{ margin: '0 auto 1rem' }}>
                 <Heart size={36} className="text-accent" />
               </div>
-              <h3>No Registered Pets Yet</h3>
+              <h3>No Registered Pets in this Category</h3>
               <p style={{ maxWidth: '480px', margin: '0 auto 1.5rem', color: 'var(--text-muted)' }}>
-                Add your companion's profile to book appointments, track medical passports, and receive personalized AI health recommendations.
+                {selectedTypeFilter !== 'All' 
+                  ? `You haven't registered any ${selectedTypeFilter} companions yet.` 
+                  : 'Add your companion profile to book appointments and track medical passports.'}
               </p>
               <button className="btn btn-primary" onClick={openAddModal}>
-                <Plus size={18} /> Register First Pet
+                <Plus size={18} /> Register Companion
               </button>
             </div>
           ) : (
-            pets.map(pet => (
+            filteredPets.map(pet => (
               <div key={pet.id} className="pet-profile-card card">
               <div className="pet-card-media">
-                <img src={pet.photo} alt={pet.name} className="pet-img-cover" />
+                <img 
+                  src={pet.photo || getPetTypeDefaultImage(pet.type)} 
+                  alt={pet.name} 
+                  className="pet-img-cover" 
+                  loading="lazy"
+                  onError={(e) => { e.target.src = getPetTypeDefaultImage(pet.type); }}
+                />
                 <span className="pet-type-tag">{pet.type}</span>
               </div>
 
@@ -288,11 +325,11 @@ const PetsManagementPage = () => {
                       value={type}
                       onChange={e => setType(e.target.value)}
                     >
-                      <option value="Dog">Dog</option>
-                      <option value="Cat">Cat</option>
-                      <option value="Bird">Bird</option>
-                      <option value="Rabbit">Rabbit</option>
-                      <option value="Other">Other Companion</option>
+                      {PET_TYPES.map(pt => (
+                        <option key={pt.id} value={pt.id}>
+                          {pt.icon} {pt.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -350,7 +387,22 @@ const PetsManagementPage = () => {
 
                 <div className="form-group">
                   <label className="form-label">Pet Photograph (Upload to Supabase Storage or Paste URL)</label>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  
+                  {/* Visual Photo Preview Card */}
+                  <div className="pet-form-preview-card">
+                    <img 
+                      src={photo || getPetTypeDefaultImage(type)} 
+                      alt="Companion Preview" 
+                      className="pet-preview-thumb"
+                      onError={(e) => { e.target.src = '/images/pets/pet-dog-golden.jpg'; }}
+                    />
+                    <div className="pet-preview-details">
+                      <strong>{photo ? 'Custom Image Ready' : `Default Photo for ${type}`}</strong>
+                      <small>{photo ? 'Stored and linked to pet profile' : 'Upload your companion\'s photo to replace with a personalized picture.'}</small>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', marginTop: '0.5rem' }}>
                     <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                       <Upload size={15} />
                       <span>{uploadingPhoto ? 'Uploading to Bucket...' : 'Upload Image File'}</span>
@@ -362,7 +414,7 @@ const PetsManagementPage = () => {
                         disabled={uploadingPhoto}
                       />
                     </label>
-                    {photo && <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)', alignSelf: 'center' }}>✓ Image Selected</span>}
+                    {photo && <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)', alignSelf: 'center' }}>✓ Custom Photo Linked</span>}
                   </div>
                   <input 
                     type="url" 
@@ -371,7 +423,7 @@ const PetsManagementPage = () => {
                     value={photo}
                     onChange={e => setPhoto(e.target.value)}
                   />
-                  <small className="form-text-hint">Leave blank to use an adorable automatic default photo.</small>
+                  <small className="form-text-hint">Leave blank to use an adorable automatic default photo for this species.</small>
                 </div>
 
                 <div className="form-group">

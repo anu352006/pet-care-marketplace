@@ -278,6 +278,15 @@
   gap: 0.65rem;
 }
 
+.author-avatar-sm-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--color-primary-light);
+  flex-shrink: 0;
+}
+
 .author-avatar-sm {
   width: 36px;
   height: 36px;

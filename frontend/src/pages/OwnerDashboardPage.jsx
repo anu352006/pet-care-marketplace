@@ -51,15 +51,29 @@ const OwnerDashboardPage = () => {
               </Link>
             </div>
           </div>
-          {primaryPet && (
-            <div className="primary-pet-pill">
-              <img src={primaryPet.photo} alt={primaryPet.name} className="primary-pet-avatar" />
-              <div>
-                <strong>{primaryPet.name}</strong>
-                <span>{primaryPet.breed} • {primaryPet.age} yrs</span>
+          
+          <div className="welcome-banner-right">
+            {primaryPet && (
+              <div className="primary-pet-pill">
+                <img 
+                  src={primaryPet.photo || '/images/pets/pet-dog-golden.jpg'} 
+                  alt={primaryPet.name} 
+                  className="primary-pet-avatar"
+                  onError={(e) => { e.target.src = '/images/pets/pet-dog-golden.jpg'; }}
+                />
+                <div>
+                  <strong>{primaryPet.name}</strong>
+                  <span>{primaryPet.breed} • {primaryPet.age} yrs</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+            <img 
+              src="/images/hero/hero-lifestyle.jpg" 
+              alt="Happy pet parent with companion" 
+              className="welcome-lifestyle-badge-img"
+              loading="lazy"
+            />
+          </div>
         </div>
 
         {/* Dashboard Stat Counters */}
@@ -181,7 +195,13 @@ const OwnerDashboardPage = () => {
               <div className="recs-grid">
                 {recommendedServices.map(service => (
                   <div key={service.id} className="rec-mini-card">
-                    <img src={service.image} alt={service.name} className="rec-img" />
+                    <img 
+                      src={service.image || '/images/services/service-vet-exam.jpg'} 
+                      alt={service.name} 
+                      className="rec-img"
+                      loading="lazy"
+                      onError={(e) => { e.target.src = '/images/services/service-vet-exam.jpg'; }}
+                    />
                     <div className="rec-info">
                       <span className="rec-cat">{service.categoryName}</span>
                       <h4>{service.name}</h4>
@@ -214,10 +234,16 @@ const OwnerDashboardPage = () => {
               <div className="dash-pets-list">
                 {pets.map(p => (
                   <div key={p.id} className="dash-pet-item">
-                    <img src={p.photo} alt={p.name} className="dash-pet-avatar" />
+                    <img 
+                      src={p.photo || '/images/pets/pet-dog-golden.jpg'} 
+                      alt={p.name} 
+                      className="dash-pet-avatar"
+                      loading="lazy"
+                      onError={(e) => { e.target.src = '/images/pets/pet-dog-golden.jpg'; }}
+                    />
                     <div className="dash-pet-details">
                       <h4>{p.name}</h4>
-                      <span className="dash-pet-breed">{p.breed} • {p.gender}</span>
+                      <span className="dash-pet-breed">{p.type} • {p.breed}</span>
                       <span className="dash-pet-vax">
                         <ShieldCheck size={13} className="text-success" />
                         Vaccines: Up to date

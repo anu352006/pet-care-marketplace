@@ -1,25 +1,112 @@
 .about-hero-card {
-  padding: 3.5rem 2.5rem;
-  text-align: center;
+  padding: 3rem;
   background: linear-gradient(135deg, #FFFFFF 0%, #F5F8F4 100%);
-  margin-bottom: 3rem;
+  margin-bottom: 3.5rem;
   border-top: 4px solid var(--color-primary);
+  overflow: hidden;
+}
+
+.about-hero-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  align-items: center;
+  gap: 3.5rem;
+}
+
+.about-hero-text {
+  text-align: left;
 }
 
 .about-title {
   font-size: 2.8rem;
   margin: 1rem 0;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
+  line-height: 1.15;
+  color: var(--color-primary-dark);
 }
 
 .about-lead {
-  font-size: 1.15rem;
+  font-size: 1.125rem;
   color: var(--color-text-muted);
-  max-width: 720px;
-  margin: 0 auto;
   line-height: 1.7;
+  margin-bottom: 2rem;
+}
+
+.about-stats-strip {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.about-stat strong {
+  display: block;
+  font-size: 1.65rem;
+  color: var(--color-primary);
+  font-family: var(--font-heading);
+  line-height: 1.1;
+}
+
+.about-stat span {
+  font-size: 0.825rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.about-hero-media {
+  position: relative;
+}
+
+.about-hero-img {
+  width: 100%;
+  height: 380px;
+  object-fit: cover;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  border: 4px solid #FFFFFF;
+}
+
+/* Visual Standards Dual Grid */
+.about-visual-standards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-bottom: 3.5rem;
+}
+
+.standard-visual-card {
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.standard-visual-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.standard-card-img {
+  width: 100%;
+  height: 240px;
+  object-fit: cover;
+}
+
+.standard-card-body {
+  padding: 1.75rem;
+}
+
+.standard-card-body h3 {
+  font-size: 1.3rem;
+  margin-bottom: 0.6rem;
+  color: var(--color-primary-dark);
+}
+
+.standard-card-body p {
+  color: var(--color-text-muted);
+  font-size: 0.925rem;
+  line-height: 1.6;
 }
 
 .pillars-grid {
@@ -120,6 +207,19 @@
 }
 
 @media (max-width: 992px) {
+  .about-hero-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .about-hero-text {
+    text-align: center;
+  }
+  .about-stats-strip {
+    justify-content: center;
+  }
+  .about-visual-standards-grid {
+    grid-template-columns: 1fr;
+  }
   .pillars-grid {
     grid-template-columns: 1fr;
   }

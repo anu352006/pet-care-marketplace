@@ -86,12 +86,23 @@ const ProviderDashboardPage = () => {
       <div className="container">
         {/* Header Strip */}
         <div className="provider-header-banner card">
-          <div className="banner-left">
-            <span className="badge badge-accent">Service Specialist Console</span>
-            <h1>{user?.businessName || 'Paws & Claws Veterinary Wellness'}</h1>
-            <p className="banner-sub">
-              Logged in as <strong>{user?.name || 'Dr. Aarav Sharma'}</strong> • Indiranagar, Bengaluru
-            </p>
+          <div className="banner-provider-profile">
+            <img 
+              src={user?.avatar || '/images/providers/provider-aarav.jpg'} 
+              alt={user?.name || 'Verified Provider'} 
+              className="provider-banner-avatar"
+              onError={(e) => { e.target.src = '/images/providers/provider-aarav.jpg'; }}
+            />
+            <div className="banner-left">
+              <div className="provider-badge-row">
+                <span className="badge badge-accent">Service Specialist Console</span>
+                <span className="verified-pill"><ShieldCheck size={13} /> Verified Business</span>
+              </div>
+              <h1>{user?.businessName || 'Paws & Claws Veterinary Wellness'}</h1>
+              <p className="banner-sub">
+                Logged in as <strong>{user?.name || 'Dr. Aarav Sharma'}</strong> • Indiranagar, Bengaluru
+              </p>
+            </div>
           </div>
           <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
             <Plus size={18} /> Add New Service
@@ -211,7 +222,13 @@ const ProviderDashboardPage = () => {
               <div className="provider-service-listings">
                 {myServices.map(s => (
                   <div key={s.id} className="p-service-item">
-                    <img src={s.image} alt={s.name} className="p-service-thumb" />
+                    <img 
+                      src={s.image || '/images/services/service-vet-exam.jpg'} 
+                      alt={s.name} 
+                      className="p-service-thumb" 
+                      loading="lazy"
+                      onError={(e) => { e.target.src = '/images/services/service-vet-exam.jpg'; }}
+                    />
                     <div className="p-service-details">
                       <h4>{s.name}</h4>
                       <span className="p-service-cat">{s.categoryName} • {s.duration}</span>

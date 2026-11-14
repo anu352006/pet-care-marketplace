@@ -131,7 +131,12 @@ const AdminDashboardPage = () => {
                     <tr key={prov.id}>
                       <td>
                         <div className="table-user-cell">
-                          <img src={prov.avatar} alt={prov.name} className="table-avatar" />
+                          <img 
+                            src={prov.avatar || '/images/providers/provider-aarav.jpg'} 
+                            alt={prov.name} 
+                            className="table-avatar"
+                            onError={(e) => { e.target.src = '/images/providers/provider-aarav.jpg'; }}
+                          />
                           <div>
                             <strong>{prov.name}</strong>
                             <span>{prov.email}</span>
@@ -188,7 +193,12 @@ const AdminDashboardPage = () => {
                     <tr key={srv.id}>
                       <td>
                         <div className="table-service-cell">
-                          <img src={srv.image} alt={srv.name} className="table-thumb" />
+                          <img 
+                            src={srv.image || '/images/services/service-vet-exam.jpg'} 
+                            alt={srv.name} 
+                            className="table-thumb"
+                            onError={(e) => { e.target.src = '/images/services/service-vet-exam.jpg'; }}
+                          />
                           <strong>{srv.name}</strong>
                         </div>
                       </td>

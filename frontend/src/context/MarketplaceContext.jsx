@@ -18,6 +18,37 @@ const getCategoryTitle = (catSlug) => {
   return match ? match.name : 'Pet Care Service';
 };
 
+// Default high-resolution photography resolvers
+export const getCategoryDefaultImage = (catSlug) => {
+  switch (catSlug) {
+    case 'vet': return '/images/services/service-vet-exam.jpg';
+    case 'grooming': return '/images/services/service-grooming-spa.jpg';
+    case 'boarding': return '/images/services/service-boarding-suite.jpg';
+    case 'daycare': return '/images/services/service-daycare-play.jpg';
+    case 'walking': return '/images/services/service-walking.jpg';
+    case 'training': return '/images/services/service-training-puppy.jpg';
+    case 'sitting': return '/images/services/service-sitting.jpg';
+    case 'taxi': return '/images/services/service-taxi-cab.jpg';
+    default: return '/images/services/service-vet-exam.jpg';
+  }
+};
+
+export const getPetTypeDefaultImage = (type) => {
+  const t = (type || '').toLowerCase();
+  if (t.includes('cat')) return '/images/pets/pet-cat-persian.jpg';
+  if (t.includes('bird') || t.includes('avian')) return '/images/pets/pet-bird-cockatiel.jpg';
+  if (t.includes('rabbit') || t.includes('bunny')) return '/images/pets/pet-rabbit-lop.jpg';
+  if (t.includes('hamster') || t.includes('guinea')) return '/images/pets/pet-hamster-syrian.jpg';
+  if (t.includes('fish') || t.includes('aqua')) return '/images/pets/pet-fish-aquarium.jpg';
+  if (t.includes('turtle') || t.includes('reptile')) return '/images/pets/pet-turtle-slider.jpg';
+  return '/images/pets/pet-dog-golden.jpg';
+};
+
+// UUID validation helper to ensure clean PostgreSQL compatibility
+const isValidUuid = (str) => {
+  return typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+};
+
 export const MarketplaceProvider = ({ children }) => {
   const { user } = useAuth();
 
@@ -107,7 +138,7 @@ export const MarketplaceProvider = ({ children }) => {
             rating: Number(p.rating || 5.0),
             reviewsCount: p.reviews_count || 0,
             verified: !!p.verified,
-            avatar: u?.avatar_url || 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=400&q=80',
+            avatar: u?.avatar_url || '/images/providers/provider-aarav.jpg',
             bio: p.description || 'Dedicated pet care specialist.',
             servicesCount: 2
           };
@@ -179,7 +210,7 @@ export const MarketplaceProvider = ({ children }) => {
             rating: Number(s.rating || 5.0),
             reviewsCount: 28,
             featured: !!s.featured,
-            image: s.image_url || 'https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?auto=format&fit=crop&w=800&q=80',
+            image: s.image_url || getCategoryDefaultImage(s.category),
             description: s.description,
             included: [
               'Professional clinical or grooming care',
@@ -195,7 +226,14 @@ export const MarketplaceProvider = ({ children }) => {
       // 3. Fetch Registered Pets (Filtered to logged-in owner unless admin)
       let petQuery = supabase.from('pets').select('*').order('created_at', { ascending: false });
       if (user && user.role !== 'ADMIN') {
-        petQuery = petQuery.eq('owner_id', user.id);
+        let ownerId = isValidUuid(user.id) ? user.id : null;
+        if (!ownerId && user.email) {
+          const { data: matched } = await supabase.from('users').select('id').eq('email', user.email).maybeSingle();
+          if (matched?.id) ownerId = matched.id;
+        }
+        if (ownerId) {
+          petQuery = petQuery.eq('owner_id', ownerId);
+        }
       }
 
       const { data: dbPets, error: petErr } = await petQuery;
@@ -210,7 +248,7 @@ export const MarketplaceProvider = ({ children }) => {
           age: p.age || 1,
           gender: p.gender || 'Male',
           weight: p.weight || '10 kg',
-          photo: p.image_url || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80',
+          photo: p.image_url || getPetTypeDefaultImage(p.animal_type),
           vaccinations: p.vaccination_details || 'Up to date with primary vaccinations',
           medicalHistory: p.medical_history || 'No chronic health issues recorded',
           ownerId: p.owner_id
@@ -239,10 +277,31 @@ export const MarketplaceProvider = ({ children }) => {
         `)
         .order('created_at', { ascending: false });
 
-      if (user && user.role === 'SERVICE_PROVIDER' && user.providerId) {
-        bkQuery = bkQuery.eq('provider_id', user.providerId);
+      if (user && user.role === 'SERVICE_PROVIDER') {
+        let provId = isValidUuid(user.providerId) ? user.providerId : null;
+        if (!provId && user.id) {
+          let uId = isValidUuid(user.id) ? user.id : null;
+          if (!uId && user.email) {
+            const { data: mUser } = await supabase.from('users').select('id').eq('email', user.email).maybeSingle();
+            if (mUser?.id) uId = mUser.id;
+          }
+          if (uId) {
+            const { data: mProv } = await supabase.from('providers').select('id').eq('user_id', uId).maybeSingle();
+            if (mProv?.id) provId = mProv.id;
+          }
+        }
+        if (provId) {
+          bkQuery = bkQuery.eq('provider_id', provId);
+        }
       } else if (user && user.role !== 'ADMIN') {
-        bkQuery = bkQuery.eq('user_id', user.id);
+        let uId = isValidUuid(user.id) ? user.id : null;
+        if (!uId && user.email) {
+          const { data: mUser } = await supabase.from('users').select('id').eq('email', user.email).maybeSingle();
+          if (mUser?.id) uId = mUser.id;
+        }
+        if (uId) {
+          bkQuery = bkQuery.eq('user_id', uId);
+        }
       }
 
       const { data: dbBookings, error: bkErr } = await bkQuery;
@@ -319,20 +378,27 @@ export const MarketplaceProvider = ({ children }) => {
 
       // 6. Fetch User Notifications
       if (user) {
-        const { data: dbNotifs } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+        let notifUid = isValidUuid(user.id) ? user.id : null;
+        if (!notifUid && user.email) {
+          const { data: mUser } = await supabase.from('users').select('id').eq('email', user.email).maybeSingle();
+          if (mUser?.id) notifUid = mUser.id;
+        }
+        if (notifUid) {
+          const { data: dbNotifs } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', notifUid)
+            .order('created_at', { ascending: false });
 
-        if (dbNotifs && dbNotifs.length > 0) {
-          setNotifications(dbNotifs.map(n => ({
-            id: n.id,
-            title: n.title,
-            message: n.message,
-            time: 'Recent',
-            read: n.is_read
-          })));
+          if (dbNotifs && dbNotifs.length > 0) {
+            setNotifications(dbNotifs.map(n => ({
+              id: n.id,
+              title: n.title,
+              message: n.message,
+              time: 'Recent',
+              read: n.is_read
+            })));
+          }
         }
       }
     } catch (err) {
@@ -366,9 +432,7 @@ export const MarketplaceProvider = ({ children }) => {
       ...petData,
       id: 'pet-' + Date.now(),
       ownerId: user?.id || 'demo-user-10',
-      photo: petData.photo || (petData.type === 'Cat' 
-        ? 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80'
-        : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80')
+      photo: petData.photo || getPetTypeDefaultImage(petData.type)
     };
 
     if (isSupabaseConfigured() && user) {

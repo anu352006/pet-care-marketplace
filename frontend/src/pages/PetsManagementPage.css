@@ -6,9 +6,88 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 3rem;
+  margin-bottom: 1.75rem;
   flex-wrap: wrap;
   gap: 1.5rem;
+}
+
+/* Pet Species Filter Pill Strip */
+.pet-species-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 2.25rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  scrollbar-width: none;
+}
+
+.pet-species-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.species-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-color);
+  color: var(--color-text-main);
+  padding: 0.55rem 1.15rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.species-filter-pill:hover {
+  border-color: var(--color-primary-light);
+  background: var(--color-surface-alt);
+}
+
+.species-filter-pill.active {
+  background: var(--color-primary-dark);
+  color: #FFFFFF;
+  border-color: var(--color-primary-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Modal Pet Image Preview Card */
+.pet-form-preview-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--color-surface-alt);
+  padding: 0.85rem 1.15rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  margin-bottom: 0.85rem;
+}
+
+.pet-preview-thumb {
+  width: 58px;
+  height: 58px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 2px solid var(--color-primary);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-xs);
+}
+
+.pet-preview-details strong {
+  display: block;
+  font-size: 0.925rem;
+  color: var(--color-primary-dark);
+  margin-bottom: 0.15rem;
+}
+
+.pet-preview-details small {
+  display: block;
+  font-size: 0.775rem;
+  color: var(--color-text-muted);
+  line-height: 1.35;
 }
 
 .pets-grid {

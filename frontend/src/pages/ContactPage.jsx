@@ -66,6 +66,19 @@ const ContactPage = () => {
                 </div>
               </div>
             </div>
+
+            <div className="contact-specialist-card card">
+              <img 
+                src="/images/common/contact-support.jpg" 
+                alt="Compassionate pet care customer support team" 
+                className="specialist-banner-img"
+                loading="lazy"
+              />
+              <div className="specialist-card-body">
+                <strong>Dedicated Parent Advocates</strong>
+                <p>Every support inquiry is answered by pet care coordinators trained in animal welfare and appointment logistics.</p>
+              </div>
+            </div>
           </div>
 
           {/* Form Right Col */}
