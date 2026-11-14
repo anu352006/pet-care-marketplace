@@ -84,8 +84,12 @@ const PetsManagementPage = () => {
       const uploadedUrl = await uploadStorageFile('pet-images', file, 'pets');
       setPhoto(uploadedUrl);
     } catch (err) {
-      console.warn('Storage upload error:', err);
-      setFormError('Failed to upload image to storage. Make sure your Supabase project is reachable.');
+      console.error('[Pet Image Upload Error]', {
+        message: err.message,
+        statusCode: err.statusCode || err.status,
+        name: err.name,
+      });
+      setFormError(err.message || 'Failed to upload image. Please try again.');
     } finally {
       setUploadingPhoto(false);
     }

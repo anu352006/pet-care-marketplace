@@ -48,6 +48,7 @@ const ProviderDashboardPage = () => {
   const [newDesc, setNewDesc] = useState('');
   const [serviceImage, setServiceImage] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageError, setImageError] = useState('');
 
   const handleCreateService = async (e) => {
     e.preventDefault();
@@ -333,12 +334,18 @@ const ProviderDashboardPage = () => {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
+                      setImageError('');
                       try {
                         setUploadingImage(true);
                         const url = await uploadStorageFile('service-images', file, 'services');
                         setServiceImage(url);
                       } catch (err) {
-                        console.warn('Storage upload notice:', err);
+                        console.error('[Provider Service Image Upload Error]', {
+                          message: err.message,
+                          statusCode: err.statusCode || err.status,
+                          name: err.name,
+                        });
+                        setImageError(err.message || 'Failed to upload service image.');
                       } finally {
                         setUploadingImage(false);
                       }
@@ -346,6 +353,7 @@ const ProviderDashboardPage = () => {
                   />
                   {uploadingImage && <small style={{ color: 'var(--primary)' }}>Uploading to service-images bucket...</small>}
                   {serviceImage && <small style={{ color: 'var(--accent-secondary)' }}>✓ Image uploaded successfully</small>}
+                  {imageError && <small style={{ color: '#ef4444', display: 'block', marginTop: '0.25rem' }}>{imageError}</small>}
                 </div>
 
                 <div className="form-btn-actions">

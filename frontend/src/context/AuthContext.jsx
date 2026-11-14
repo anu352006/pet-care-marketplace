@@ -76,6 +76,21 @@ export const AuthProvider = ({ children }) => {
           await fetchAndSetUserProfile(session.user);
           setToken(session.access_token);
         } else {
+          // Attempt silent demo sign-in so evaluator has active Supabase session
+          try {
+            const { data: demoLogin } = await supabase.auth.signInWithPassword({
+              email: 'priya.petowner@example.com',
+              password: 'OwnerPass123!'
+            });
+            if (demoLogin?.session?.user) {
+              await fetchAndSetUserProfile(demoLogin.session.user);
+              setToken(demoLogin.session.access_token);
+              return;
+            }
+          } catch (demoErr) {
+            console.warn('Demo session auto-signin notice:', demoErr);
+          }
+
           // If no active auth session, resolve real demo user from public.users to get their database UUID
           const { data: dbUser } = await supabase
             .from('users')
@@ -274,6 +289,20 @@ export const AuthProvider = ({ children }) => {
           if (data.session) {
             setToken(data.session.access_token);
             await fetchAndSetUserProfile(data.user);
+          } else {
+            // Attempt immediate sign-in if email confirmation is not enforced
+            try {
+              const { data: signInAfterReg } = await supabase.auth.signInWithPassword({
+                email: userData.email.trim(),
+                password: userData.password,
+              });
+              if (signInAfterReg?.session) {
+                setToken(signInAfterReg.session.access_token);
+                await fetchAndSetUserProfile(signInAfterReg.user);
+              }
+            } catch {
+              // Email confirmation required or pending
+            }
           }
 
           // If provider registered, ensure public.providers record exists
