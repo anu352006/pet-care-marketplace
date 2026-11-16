@@ -5,6 +5,7 @@ import { MarketplaceProvider } from './context/MarketplaceContext';
 import Navbar from './layouts/Navbar';
 import Footer from './layouts/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import AdminRoute from './components/AdminRoute';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -43,7 +44,14 @@ function App() {
                 <Route path="/owner-dashboard" element={<OwnerDashboardPage />} />
                 <Route path="/pets" element={<PetsManagementPage />} />
                 <Route path="/provider-dashboard" element={<ProviderDashboardPage />} />
-                <Route path="/admin" element={<AdminDashboardPage />} />
+                <Route 
+                  path="/admin" 
+                  element={
+                    <AdminRoute>
+                      <AdminDashboardPage />
+                    </AdminRoute>
+                  } 
+                />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
