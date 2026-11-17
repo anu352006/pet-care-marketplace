@@ -24,19 +24,19 @@ const ProviderDashboardPage = () => {
   const { user } = useAuth();
   const { services, bookings, reviews, updateBookingStatus, addService, deleteService } = useMarketplace();
 
-  // For Dr. Aarav Sharma (providerId = 1 or UUID)
-  const currentProviderId = user?.role === 'SERVICE_PROVIDER' ? (user.providerId || user.id || 1) : 1;
-  const myServices = services.filter(s => String(s.providerId) === String(currentProviderId) || String(s.providerId) === '1');
-  const myBookings = bookings.filter(b => String(b.providerId) === String(currentProviderId) || String(b.providerId) === '1');
+  // For service provider isolation
+  const currentProviderId = user?.providerId || (user?.role === 'SERVICE_PROVIDER' ? user.id : null);
+  const myServices = services.filter(s => currentProviderId && String(s.providerId) === String(currentProviderId));
+  const myBookings = bookings.filter(b => currentProviderId && String(b.providerId) === String(currentProviderId));
 
   // Status counts
   const pendingBookings = myBookings.filter(b => b.status === 'PENDING');
   const confirmedBookings = myBookings.filter(b => b.status === 'CONFIRMED');
   const completedBookings = myBookings.filter(b => b.status === 'COMPLETED');
 
-  // Revenue calculation
+  // Revenue calculation: from COMPLETED appointments only (authoritative)
   const totalRevenue = myBookings
-    .filter(b => b.status === 'CONFIRMED' || b.status === 'COMPLETED')
+    .filter(b => b.status === 'COMPLETED')
     .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
 
   // Add Service Modal state
@@ -97,11 +97,17 @@ const ProviderDashboardPage = () => {
             <div className="banner-left">
               <div className="provider-badge-row">
                 <span className="badge badge-accent">Service Specialist Console</span>
-                <span className="verified-pill"><ShieldCheck size={13} /> Verified Business</span>
+                {user?.verified ? (
+                  <span className="verified-pill"><ShieldCheck size={13} /> Verified Business</span>
+                ) : (
+                  <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Clock size={13} /> Pending Admin Verification
+                  </span>
+                )}
               </div>
               <h1>{user?.businessName || 'Paws & Claws Veterinary Wellness'}</h1>
               <p className="banner-sub">
-                Logged in as <strong>{user?.name || 'Dr. Aarav Sharma'}</strong> • Indiranagar, Bengaluru
+                Logged in as <strong>{user?.name || 'Dr. Aarav Sharma'}</strong> • {user?.city || 'Bengaluru'}
               </p>
             </div>
           </div>
@@ -131,9 +137,9 @@ const ProviderDashboardPage = () => {
           </div>
 
           <div className="kpi-card card">
-            <span className="kpi-label">Estimated Revenue</span>
+            <span className="kpi-label">Confirmed Revenue</span>
             <strong className="kpi-num text-success">₹{totalRevenue.toLocaleString('en-IN')}</strong>
-            <span className="kpi-sub">Confirmed & completed</span>
+            <span className="kpi-sub">From completed appointments only</span>
           </div>
         </div>
 
@@ -185,7 +191,7 @@ const ProviderDashboardPage = () => {
                             </button>
                             <button 
                               className="btn btn-outline btn-sm text-danger"
-                              onClick={() => updateBookingStatus(b.id, 'CANCELLED')}
+                              onClick={() => updateBookingStatus(b.id, 'REJECTED')}
                             >
                               <XCircle size={15} /> Reject
                             </button>

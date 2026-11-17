@@ -6,6 +6,7 @@ import Navbar from './layouts/Navbar';
 import Footer from './layouts/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import AdminRoute from './components/AdminRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -41,9 +42,30 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="/owner-dashboard" element={<OwnerDashboardPage />} />
-                <Route path="/pets" element={<PetsManagementPage />} />
-                <Route path="/provider-dashboard" element={<ProviderDashboardPage />} />
+                <Route 
+                  path="/owner-dashboard" 
+                  element={
+                    <ProtectedRoute>
+                      <OwnerDashboardPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/pets" 
+                  element={
+                    <ProtectedRoute>
+                      <PetsManagementPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/provider-dashboard" 
+                  element={
+                    <ProtectedRoute requiredRole="SERVICE_PROVIDER">
+                      <ProviderDashboardPage />
+                    </ProtectedRoute>
+                  } 
+                />
                 <Route 
                   path="/admin" 
                   element={

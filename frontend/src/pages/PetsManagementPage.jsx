@@ -12,6 +12,7 @@ import {
   X, 
   Check, 
   AlertTriangle,
+  AlertCircle,
   Scale,
   Calendar,
   Sparkles,
@@ -30,6 +31,7 @@ const PetsManagementPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingPet, setEditingPet] = useState(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
 
   // Form states
   const [name, setName] = useState('');
@@ -127,8 +129,13 @@ const PetsManagementPage = () => {
   };
 
   const handleDelete = async (id) => {
-    await deletePet(id);
-    setDeleteConfirmId(null);
+    setDeleteError('');
+    try {
+      await deletePet(id);
+      setDeleteConfirmId(null);
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to remove pet.');
+    }
   };
 
   const filteredPets = selectedTypeFilter === 'All' 
@@ -269,15 +276,21 @@ const PetsManagementPage = () => {
 
         {/* Delete Confirmation Modal */}
         {deleteConfirmId && (
-          <div className="modal-backdrop" onClick={() => setDeleteConfirmId(null)}>
+          <div className="modal-backdrop" onClick={() => { setDeleteConfirmId(null); setDeleteError(''); }}>
             <div className="modal-content confirmation-modal" onClick={e => e.stopPropagation()}>
               <div className="confirm-icon-box">
                 <AlertTriangle size={32} className="text-danger" />
               </div>
               <h3>Remove Pet Profile?</h3>
               <p>Are you sure you want to remove this pet profile? Past completed appointment logs will remain intact.</p>
+              {deleteError && (
+                <div className="alert alert-danger" style={{ marginBottom: '1rem', textAlign: 'left', fontSize: '0.85rem' }}>
+                  <AlertCircle size={16} />
+                  <span>{deleteError}</span>
+                </div>
+              )}
               <div className="confirm-btn-row">
-                <button className="btn btn-outline" onClick={() => setDeleteConfirmId(null)}>
+                <button className="btn btn-outline" onClick={() => { setDeleteConfirmId(null); setDeleteError(''); }}>
                   Cancel
                 </button>
                 <button className="btn btn-primary bg-danger text-white" onClick={() => handleDelete(deleteConfirmId)}>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMarketplace } from '../context/MarketplaceContext';
 import { useAuth } from '../context/AuthContext';
-import { X, Calendar, Clock, CheckCircle2, AlertTriangle, Heart, User, ShieldCheck } from 'lucide-react';
+import { X, Calendar, Clock, CheckCircle2, AlertTriangle, Heart, User, ShieldCheck, LogIn } from 'lucide-react';
 import './BookingModal.css';
 
 const BookingModal = ({ service, onClose, onBookingSuccess }) => {
@@ -22,6 +23,7 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
   const [notes, setNotes] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Available slots for this service
   const slots = service.availableSlots || ['09:30 AM', '11:00 AM', '02:30 PM', '04:30 PM'];
@@ -29,6 +31,11 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!user) {
+      setErrorMsg('Please sign in or register an account before booking an appointment.');
+      return;
+    }
 
     if (!selectedPetId) {
       setErrorMsg('Please select a registered pet for this appointment.');
@@ -47,6 +54,7 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
 
     const petObj = pets.find(p => String(p.id) === String(selectedPetId));
 
+    setSubmitting(true);
     try {
       const created = await createBooking({
         serviceId: service.id,
@@ -67,6 +75,8 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
       if (onBookingSuccess) onBookingSuccess(created);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to complete booking.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -122,9 +132,19 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
                       </div>
                     ))}
                   </div>
+                ) : !user ? (
+                  <div className="no-pets-notice alert alert-info" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <LogIn size={20} className="text-primary" />
+                    <div>
+                      <span>Please <strong><Link to="/login" onClick={onClose} style={{ textDecoration: 'underline' }}>Sign In</Link></strong> or <strong><Link to="/register" onClick={onClose} style={{ textDecoration: 'underline' }}>Create an Account</Link></strong> to book an appointment with this specialist.</span>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="no-pets-notice alert alert-warning">
-                    No registered pets found. Please go to "My Pets" to add your companion before booking.
+                  <div className="no-pets-notice alert alert-warning" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Heart size={20} className="text-warning" />
+                    <div>
+                      <span>You haven't registered any pets yet. Please <strong><Link to="/pets" onClick={onClose} style={{ textDecoration: 'underline' }}>Add your pet</Link></strong> first to schedule an appointment.</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -189,8 +209,12 @@ const BookingModal = ({ service, onClose, onBookingSuccess }) => {
                     ₹{service.price.toLocaleString('en-IN')} <small>({service.priceUnit})</small>
                   </div>
                 </div>
-                <button type="submit" className="btn btn-primary btn-lg">
-                  Confirm Booking
+                <button 
+                  type="submit" 
+                  className="btn btn-primary btn-lg"
+                  disabled={submitting || !user || pets.length === 0}
+                >
+                  {submitting ? 'Confirming...' : 'Confirm Booking'}
                 </button>
               </div>
             </form>

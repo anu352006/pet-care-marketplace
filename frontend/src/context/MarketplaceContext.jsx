@@ -100,25 +100,47 @@ export const MarketplaceProvider = ({ children }) => {
     setFetchError(null);
 
     try {
-      // 1. Fetch Providers with joined Users profile
-      const { data: dbProviders, error: provErr } = await supabase
-        .from('providers')
-        .select(`
-          id,
-          user_id,
-          business_name,
-          location,
-          description,
-          verified,
-          rating,
-          reviews_count,
-          users (
-            full_name,
-            email,
-            phone,
-            avatar_url
-          )
-        `);
+      // 1. Fetch Providers (prefer privacy-preserving provider_public_profiles view)
+      let dbProviders = null;
+      let provErr = null;
+
+      const { data: viewData, error: viewErr } = await supabase
+        .from('provider_public_profiles')
+        .select('*');
+
+      if (!viewErr && viewData && viewData.length > 0) {
+        dbProviders = viewData.map(v => ({
+          id: v.provider_id,
+          business_name: v.business_name,
+          location: v.location,
+          description: v.description,
+          verified: v.verified,
+          rating: v.rating,
+          reviews_count: v.reviews_count,
+          users: {
+            full_name: v.provider_name,
+            avatar_url: v.avatar_url
+          }
+        }));
+      } else {
+        const { data: rawProviders, error: rawErr } = await supabase
+          .from('providers')
+          .select(`
+            id,
+            business_name,
+            location,
+            description,
+            verified,
+            rating,
+            reviews_count,
+            users (
+              full_name,
+              avatar_url
+            )
+          `);
+        dbProviders = rawProviders;
+        provErr = rawErr;
+      }
 
       if (provErr) {
         console.warn('Notice fetching providers from Supabase:', provErr);
@@ -127,11 +149,10 @@ export const MarketplaceProvider = ({ children }) => {
           const u = Array.isArray(p.users) ? p.users[0] : p.users;
           return {
             id: p.id,
-            userId: p.user_id,
             name: u?.full_name || p.business_name || 'Verified Provider',
             businessName: p.business_name,
-            email: u?.email || '',
-            phone: u?.phone || '+91 98450 12345',
+            email: '',
+            phone: '',
             city: p.location || 'Bengaluru',
             area: p.location || 'Bengaluru',
             address: `${p.business_name}, ${p.location}`,
@@ -179,8 +200,8 @@ export const MarketplaceProvider = ({ children }) => {
         console.warn('Notice fetching services from Supabase:', servErr);
       } else if (dbServices) {
         const mappedServices = dbServices.map(s => {
-          const prov = Array.isArray(s.providers) ? s.providers[0] : s.providers;
-          const provU = prov && Array.isArray(prov.users) ? prov.users[0] : prov?.users;
+          const prov = (Array.isArray(s.providers) ? s.providers[0] : s.providers) || dbProviders?.find(p => String(p.id) === String(s.provider_id));
+          const provU = prov && prov.users ? (Array.isArray(prov.users) ? prov.users[0] : prov.users) : null;
 
           // Parse available slots array
           let parsedSlots = ['09:30 AM', '11:00 AM', '02:30 PM', '04:30 PM', '06:00 PM'];
@@ -256,7 +277,7 @@ export const MarketplaceProvider = ({ children }) => {
         setPets(mappedPets);
       }
 
-      // 4. Fetch Bookings with relations
+      // 4. Fetch Bookings with relations (provider details safely resolved from provider_public_profiles)
       let bkQuery = supabase
         .from('bookings')
         .select(`
@@ -272,7 +293,6 @@ export const MarketplaceProvider = ({ children }) => {
           booking_notes,
           created_at,
           services (title, category),
-          providers (business_name, location, users (full_name)),
           pets (name, breed)
         `)
         .order('created_at', { ascending: false });
@@ -310,9 +330,10 @@ export const MarketplaceProvider = ({ children }) => {
       } else if (dbBookings) {
         const mappedBookings = dbBookings.map(b => {
           const s = Array.isArray(b.services) ? b.services[0] : b.services;
-          const pr = Array.isArray(b.providers) ? b.providers[0] : b.providers;
-          const prU = pr && Array.isArray(pr.users) ? pr.users[0] : pr?.users;
           const pt = Array.isArray(b.pets) ? b.pets[0] : b.pets;
+          // Resolve provider details from dbProviders loaded via provider_public_profiles view
+          const prov = dbProviders?.find(dp => String(dp.id) === String(b.provider_id));
+          const provUser = prov?.users ? (Array.isArray(prov.users) ? prov.users[0] : prov.users) : null;
 
           return {
             id: b.id,
@@ -320,8 +341,8 @@ export const MarketplaceProvider = ({ children }) => {
             serviceName: s?.title || 'Pet Care Service',
             category: s?.category || 'vet',
             providerId: b.provider_id,
-            providerName: prU?.full_name || pr?.business_name || 'Care Specialist',
-            businessName: pr?.business_name || 'Pet Wellness Center',
+            providerName: provUser?.full_name || prov?.business_name || 'Care Specialist',
+            businessName: prov?.business_name || 'Pet Wellness Center',
             petId: b.pet_id,
             petName: pt ? `${pt.name} (${pt.breed})` : 'Registered Companion',
             date: b.booking_date,
@@ -358,7 +379,7 @@ export const MarketplaceProvider = ({ children }) => {
         const mappedReviews = dbReviews.map(r => {
           const u = Array.isArray(r.users) ? r.users[0] : r.users;
           const s = Array.isArray(r.services) ? r.services[0] : r.services;
-          const p = Array.isArray(r.providers) ? r.providers[0] : r.providers;
+          const p = (Array.isArray(r.providers) ? r.providers[0] : r.providers) || dbProviders?.find(pr => String(pr.id) === String(r.provider_id));
 
           return {
             id: r.id,
@@ -502,6 +523,9 @@ export const MarketplaceProvider = ({ children }) => {
 
       if (error) {
         console.error('Supabase pet deletion failed:', error);
+        if (error.code === '23503' || error.message?.includes('foreign key') || error.message?.includes('violates foreign key')) {
+          throw new Error('Cannot delete this companion: It is linked to existing appointment records. Pet history must be preserved for medical continuity.');
+        }
         throw new Error(error.message || 'Failed to delete pet profile.');
       }
     }
@@ -677,6 +701,69 @@ export const MarketplaceProvider = ({ children }) => {
     return updateBookingStatus(bookingId, 'CANCELLED');
   };
 
+  const rescheduleBooking = async (bookingId, newDate, newTimeSlot) => {
+    const existing = bookings.find(b => String(b.id) === String(bookingId));
+    if (!existing) {
+      throw new Error('Booking not found.');
+    }
+
+    // Role check: Only the pet owner party or admin can reschedule
+    if (user && user.role !== 'ADMIN' && String(existing.userId) !== String(user.id)) {
+      throw new Error('Security Violation: Only the pet owner can reschedule an appointment.');
+    }
+
+    // Status check: Only PENDING bookings can be rescheduled
+    if (existing.status !== 'PENDING') {
+      throw new Error(`Cannot reschedule booking: Appointment is in ${existing.status} status. Only PENDING appointments can be rescheduled.`);
+    }
+
+    // Chronological validation: reject past dates
+    const today = new Date().toISOString().split('T')[0];
+    if (newDate < today) {
+      throw new Error('Booking date cannot be in the past.');
+    }
+
+    // Chronological validation: reject past times if same day
+    if (newDate === today && newTimeSlot) {
+      try {
+        const slotDate = new Date(`${newDate} ${newTimeSlot}`);
+        if (!isNaN(slotDate.getTime()) && slotDate < new Date()) {
+          throw new Error('Selected time slot for today has already passed.');
+        }
+      } catch {
+        // Continue if custom time string format
+      }
+    }
+
+    // Frontend slot availability check against provider's active bookings
+    const isAvailable = checkSlotAvailability(existing.providerId, newDate, newTimeSlot);
+    if (!isAvailable) {
+      throw new Error(`The slot "${newTimeSlot}" on ${newDate} is already booked.`);
+    }
+
+    if (isSupabaseConfigured()) {
+      const { error: updErr } = await supabase
+        .from('bookings')
+        .update({
+          booking_date: newDate,
+          booking_time: newTimeSlot
+        })
+        .eq('id', bookingId);
+
+      if (updErr) {
+        if (updErr.code === '23505' || updErr.message?.includes('duplicate') || updErr.message?.includes('Conflict')) {
+          throw new Error(`The slot "${newTimeSlot}" on ${newDate} is already booked.`);
+        }
+        throw new Error(updErr.message || 'Failed to reschedule booking.');
+      }
+    }
+
+    // Update local state
+    setBookings(prev => prev.map(b => String(b.id) === String(bookingId) ? { ...b, date: newDate, timeSlot: newTimeSlot } : b));
+
+    return { success: true };
+  };
+
   // ==========================================================================
   // REVIEWS & RATINGS
   // ==========================================================================
@@ -839,6 +926,7 @@ export const MarketplaceProvider = ({ children }) => {
       createBooking,
       updateBookingStatus,
       cancelBooking,
+      rescheduleBooking,
       addReview,
       toggleProviderVerification,
       addService,

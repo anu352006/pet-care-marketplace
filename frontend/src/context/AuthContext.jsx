@@ -21,24 +21,17 @@ export const mapRoleToBackend = (role) => {
 };
 
 export const AuthProvider = ({ children }) => {
-  // Pre-configured default demo user for seamless academic evaluation & offline experience
-  const defaultUser = {
-    id: 'demo-user-10',
-    name: 'Priya Sundaram',
-    email: 'priya.petowner@example.com',
-    role: 'PET_OWNER',
-    phone: '+91 98765 43210',
-    city: 'Bengaluru',
-    avatar: '/images/testimonials/user-kavita.jpg',
-  };
-
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('petcare_user');
-    return saved ? JSON.parse(saved) : defaultUser;
+    try {
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('petcare_token') || 'demo-jwt-token-xyz-123';
+    return localStorage.getItem('petcare_token') || null;
   });
 
   const [loading, setLoading] = useState(true);
@@ -75,115 +68,31 @@ export const AuthProvider = ({ children }) => {
         if (session?.user) {
           await fetchAndSetUserProfile(session.user);
           setToken(session.access_token);
-          setLoading(false);
-          return;
-        }
-
-        // Check if an existing user session was saved in localStorage (e.g. Admin or Provider)
-        const savedUserRaw = localStorage.getItem('petcare_user');
-        if (savedUserRaw) {
-          try {
-            const savedUser = JSON.parse(savedUserRaw);
-            if (savedUser?.email) {
-              const { data: verifiedDbUser } = await supabase
-                .from('users')
-                .select(`
-                  id,
-                  full_name,
-                  email,
-                  role,
-                  phone,
-                  avatar_url,
-                  providers (id, business_name, location, verified)
-                `)
-                .eq('email', savedUser.email)
-                .maybeSingle();
-
-              if (verifiedDbUser) {
-                const prov = Array.isArray(verifiedDbUser.providers) ? verifiedDbUser.providers[0] : verifiedDbUser.providers;
-                const restoredRole = mapRoleToFrontend(verifiedDbUser.role);
-                const restoredUser = {
-                  id: verifiedDbUser.id,
-                  name: verifiedDbUser.full_name || savedUser.name,
-                  email: verifiedDbUser.email,
-                  role: restoredRole,
-                  phone: verifiedDbUser.phone || savedUser.phone || '',
-                  city: prov?.location || savedUser.city || 'Bengaluru',
-                  businessName: prov?.business_name || savedUser.businessName || '',
-                  avatar: verifiedDbUser.avatar_url || savedUser.avatar || '/images/testimonials/user-kavita.jpg',
-                  providerId: prov?.id || savedUser.providerId || null,
-                  verified: prov?.verified || false
-                };
-                setUser(restoredUser);
-                setLoading(false);
-                return;
-              }
-            }
-          } catch (e) {
-            console.warn('Could not restore saved user session:', e);
-          }
-        }
-
-        // If no prior session, attempt default demo sign-in for evaluator experience
-        try {
-          const { data: demoLogin } = await supabase.auth.signInWithPassword({
-            email: 'priya.petowner@example.com',
-            password: 'OwnerPass123!'
-          });
-          if (demoLogin?.session?.user) {
-            await fetchAndSetUserProfile(demoLogin.session.user);
-            setToken(demoLogin.session.access_token);
-            setLoading(false);
-            return;
-          }
-        } catch (demoErr) {
-          console.warn('Demo session auto-signin notice:', demoErr);
-        }
-
-        // Fallback default pet owner from public.users
-        const { data: dbUser } = await supabase
-          .from('users')
-          .select(`
-            id,
-            full_name,
-            email,
-            role,
-            phone,
-            avatar_url,
-            providers (id, business_name, location, verified)
-          `)
-          .eq('email', 'priya.petowner@example.com')
-          .maybeSingle();
-
-        if (dbUser?.id) {
-          const prov = Array.isArray(dbUser.providers) ? dbUser.providers[0] : dbUser.providers;
-          setUser({
-            id: dbUser.id,
-            name: dbUser.full_name || 'Priya Sundaram',
-            email: dbUser.email,
-            role: mapRoleToFrontend(dbUser.role),
-            phone: dbUser.phone || '+91 98765 43210',
-            city: prov?.location || 'Bengaluru',
-            businessName: prov?.business_name || '',
-            avatar: dbUser.avatar_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
-            providerId: prov?.id || null,
-            verified: prov?.verified || false
-          });
+        } else {
+          // No active Supabase session: ensure clean guest state
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('petcare_user');
+          localStorage.removeItem('petcare_token');
         }
       } catch (err) {
         console.warn('Supabase session load error:', err);
+        setUser(null);
+        setToken(null);
       } finally {
         setLoading(false);
       }
 
       const { data: authListener } = supabase.auth.onAuthStateChange(
         async (event, session) => {
-          if (event === 'SIGNED_IN' && session?.user) {
+          if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && session?.user) {
             await fetchAndSetUserProfile(session.user);
             setToken(session.access_token);
           } else if (event === 'SIGNED_OUT') {
             setUser(null);
             setToken(null);
+            localStorage.removeItem('petcare_user');
+            localStorage.removeItem('petcare_token');
           }
         }
       );
@@ -245,7 +154,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login handler supporting both real Supabase Auth and Instant Demo evaluation
+  // Login handler supporting real Supabase Auth
   const login = async (email, password, requestedRole = 'PET_OWNER') => {
     if (isSupabaseConfigured()) {
       try {
@@ -254,56 +163,23 @@ export const AuthProvider = ({ children }) => {
           password: password,
         });
 
-        if (!error && data?.session?.user) {
+        if (error) {
+          return { success: false, error: error.message || 'Invalid email or password.' };
+        }
+
+        if (data?.session?.user) {
           const resolvedUser = await fetchAndSetUserProfile(data.user);
           setToken(data.session.access_token);
           return { success: true, user: resolvedUser || user };
         }
 
-        // If Supabase Auth failed (e.g. Email not confirmed in auth.users),
-        // verify if the account exists in public.users to authenticate securely
-        const cleanEmail = email.trim().toLowerCase();
-        const { data: dbUser, error: dbErr } = await supabase
-          .from('users')
-          .select(`
-            id,
-            full_name,
-            email,
-            role,
-            phone,
-            avatar_url,
-            providers (id, business_name, location, verified)
-          `)
-          .eq('email', cleanEmail)
-          .maybeSingle();
-
-        if (dbUser && !dbErr) {
-          const prov = Array.isArray(dbUser.providers) ? dbUser.providers[0] : dbUser.providers;
-          const resolvedRole = mapRoleToFrontend(dbUser.role);
-          const resolvedUser = {
-            id: dbUser.id,
-            name: dbUser.full_name || (resolvedRole === 'ADMIN' ? 'System Administrator' : 'User'),
-            email: dbUser.email,
-            role: resolvedRole,
-            phone: dbUser.phone || '',
-            city: prov?.location || 'Bengaluru',
-            businessName: prov?.business_name || '',
-            avatar: dbUser.avatar_url || (resolvedRole === 'ADMIN' ? '/images/testimonials/user-arun.jpg' : '/images/testimonials/user-kavita.jpg'),
-            providerId: prov?.id || null,
-            verified: prov?.verified || false
-          };
-          setUser(resolvedUser);
-          setToken('authenticated-token-' + Date.now());
-          return { success: true, user: resolvedUser };
-        }
-
-        return { success: false, error: error?.message || 'Invalid email or password.' };
+        return { success: false, error: 'Authentication failed. Please verify your credentials.' };
       } catch (err) {
         return { success: false, error: err.message || 'Login failed.' };
       }
     }
 
-    // Offline / Demo Evaluation Fallback
+    // Offline / Demo Evaluation Fallback only if Supabase credentials are not configured
     let mockUser;
     if (requestedRole === 'ADMIN' || email.includes('admin')) {
       mockUser = {
@@ -454,6 +330,56 @@ export const AuthProvider = ({ children }) => {
     return { success: true };
   };
 
+  // Profile update handler
+  const updateProfile = async (profileData) => {
+    if (!user) throw new Error('Authentication required.');
+
+    const updatedUser = {
+      ...user,
+      name: profileData.name !== undefined ? profileData.name : user.name,
+      phone: profileData.phone !== undefined ? profileData.phone : user.phone,
+      city: profileData.city !== undefined ? profileData.city : user.city,
+      businessName: profileData.businessName !== undefined ? profileData.businessName : user.businessName,
+      avatar: profileData.avatar !== undefined ? profileData.avatar : user.avatar,
+    };
+
+    if (isSupabaseConfigured() && user.id) {
+      // 1. Update public.users
+      const { error: userErr } = await supabase
+        .from('users')
+        .update({
+          full_name: updatedUser.name,
+          phone: updatedUser.phone,
+          avatar_url: updatedUser.avatar,
+        })
+        .eq('id', user.id);
+
+      if (userErr) {
+        console.error('Failed to update public.users profile:', userErr);
+        throw new Error(userErr.message || 'Failed to update profile.');
+      }
+
+      // 2. If provider, update public.providers
+      if (user.role === 'SERVICE_PROVIDER' && user.providerId) {
+        const { error: provErr } = await supabase
+          .from('providers')
+          .update({
+            business_name: updatedUser.businessName,
+            location: updatedUser.city,
+          })
+          .eq('id', user.providerId);
+
+        if (provErr) {
+          console.error('Failed to update provider record:', provErr);
+        }
+      }
+    }
+
+    setUser(updatedUser);
+    localStorage.setItem('petcare_user', JSON.stringify(updatedUser));
+    return updatedUser;
+  };
+
   // Instant demo role switcher for UI review
   const switchRole = async (newRole) => {
     let targetEmail = 'priya.petowner@example.com';
@@ -468,45 +394,6 @@ export const AuthProvider = ({ children }) => {
       targetEmail = 'aarav.vet@example.com';
       targetPass = 'ProviderPass123!';
       targetRole = 'SERVICE_PROVIDER';
-    }
-
-    if (isSupabaseConfigured()) {
-      // 1. Try signing in with Supabase Auth credentials
-      const res = await login(targetEmail, targetPass, targetRole);
-      if (res && res.success) return res;
-
-      // 2. Fallback: look up user in public.users to get their database UUID
-      const { data: dbUser } = await supabase
-        .from('users')
-        .select(`
-          id,
-          full_name,
-          email,
-          role,
-          phone,
-          avatar_url,
-          providers (id, business_name, location, verified)
-        `)
-        .eq('email', targetEmail)
-        .maybeSingle();
-
-      if (dbUser?.id) {
-        const prov = Array.isArray(dbUser.providers) ? dbUser.providers[0] : dbUser.providers;
-        const switched = {
-          id: dbUser.id,
-          name: dbUser.full_name || (newRole === 'ADMIN' ? 'System Administrator' : newRole === 'SERVICE_PROVIDER' ? 'Dr. Aarav Sharma' : 'Priya Sundaram'),
-          email: dbUser.email,
-          role: mapRoleToFrontend(dbUser.role),
-          phone: dbUser.phone || '',
-          city: prov?.location || 'Bengaluru',
-          businessName: prov?.business_name || '',
-          avatar: dbUser.avatar_url || (newRole === 'SERVICE_PROVIDER' ? '/images/providers/provider-aarav.jpg' : newRole === 'ADMIN' ? '/images/testimonials/user-arun.jpg' : '/images/testimonials/user-kavita.jpg'),
-          providerId: prov?.id || null,
-          verified: prov?.verified || false
-        };
-        setUser(switched);
-        return { success: true, user: switched };
-      }
     }
 
     return login(targetEmail, targetPass, targetRole);
@@ -538,6 +425,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         resetPassword,
         switchRole,
+        updateProfile,
       }}
     >
       {children}

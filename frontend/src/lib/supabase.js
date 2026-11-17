@@ -101,25 +101,10 @@ export const uploadStorageFile = async (bucket, file, folder = 'uploads') => {
   }
 
   // 4. Authenticated session verification
-  let { data: sessionData } = await supabase.auth.getSession();
-  let session = sessionData?.session;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const session = sessionData?.session;
 
-  // If no active auth session, attempt transparent demo authentication for evaluation accounts
-  if (!session) {
-    try {
-      const { data: demoAuth } = await supabase.auth.signInWithPassword({
-        email: 'priya.petowner@example.com',
-        password: 'OwnerPass123!'
-      });
-      if (demoAuth?.session) {
-        session = demoAuth.session;
-      }
-    } catch (authFallbackErr) {
-      console.warn('[Supabase Storage] Demo auto-auth unavailable:', authFallbackErr);
-    }
-  }
-
-  // If still unauthenticated, throw descriptive 401 error
+  // If unauthenticated, throw descriptive 401 error
   if (!session?.user) {
     const authErr = new Error('Authentication required: Please sign in or create an account to upload photos to cloud storage.');
     authErr.statusCode = 401;

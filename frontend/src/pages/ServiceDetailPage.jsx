@@ -20,7 +20,7 @@ import './ServiceDetailPage.css';
 
 const ServiceDetailPage = () => {
   const { id } = useParams();
-  const { services, providers, reviews, addReview, loading } = useMarketplace();
+  const { services, providers, reviews, bookings, addReview, loading } = useMarketplace();
   const { user } = useAuth();
 
   const service = services.find(s => String(s.id) === String(id)) || (!loading ? services[0] : null);
@@ -47,8 +47,20 @@ const ServiceDetailPage = () => {
     if (!newComment.trim()) return;
     setReviewError('');
 
+    if (!user) {
+      setReviewError('Please sign in to submit a review.');
+      return;
+    }
+
+    // Find any completed booking matching this service or provider
+    const eligibleBooking = (bookings || []).find(
+      b => (String(b.serviceId) === String(service?.id) || String(b.providerId) === String(service?.providerId)) &&
+           b.status === 'COMPLETED'
+    );
+
     try {
       await addReview({
+        bookingId: eligibleBooking?.id || null,
         serviceId: service.id,
         serviceName: service.name,
         providerId: service.providerId,
@@ -201,8 +213,13 @@ const ServiceDetailPage = () => {
               <form onSubmit={handleReviewSubmit} className="add-review-form">
                 <h4>Share Your Experience</h4>
                 {reviewSubmitted && (
-                  <div className="alert alert-success">
+                  <div className="alert alert-success" style={{ marginBottom: '0.75rem' }}>
                     Thank you! Your verified review has been published.
+                  </div>
+                )}
+                {reviewError && (
+                  <div className="alert alert-danger" style={{ marginBottom: '0.75rem' }}>
+                    {reviewError}
                   </div>
                 )}
                 <div className="form-group">
