@@ -380,23 +380,11 @@ export const AuthProvider = ({ children }) => {
     return updatedUser;
   };
 
-  // Instant demo role switcher for UI review
-  const switchRole = async (newRole) => {
-    let targetEmail = 'priya.petowner@example.com';
-    let targetPass = 'OwnerPass123!';
-    let targetRole = 'PET_OWNER';
-
-    if (newRole === 'ADMIN') {
-      targetEmail = 'admin@petcare.org';
-      targetPass = 'AdminPass123!';
-      targetRole = 'ADMIN';
-    } else if (newRole === 'SERVICE_PROVIDER') {
-      targetEmail = 'aarav.vet@example.com';
-      targetPass = 'ProviderPass123!';
-      targetRole = 'SERVICE_PROVIDER';
-    }
-
-    return login(targetEmail, targetPass, targetRole);
+  // Role switcher: signs out and clears current session for explicit re-authentication
+  const switchRole = async () => {
+    await logout();
+    window.location.href = '/login';
+    return { success: true };
   };
 
   const logout = async () => {

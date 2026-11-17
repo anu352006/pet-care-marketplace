@@ -41,18 +41,16 @@ const LoginPage = () => {
     }
   };
 
-  // Quick fill demo shortcuts for evaluation
+  // Quick fill account shortcuts for email selection
   const fillDemo = (demoRole) => {
     setRole(demoRole);
+    setPassword('');
     if (demoRole === 'PET_OWNER') {
       setEmail('priya.petowner@example.com');
-      setPassword('OwnerPass123!');
     } else if (demoRole === 'SERVICE_PROVIDER') {
       setEmail('aarav.vet@example.com');
-      setPassword('ProviderPass123!');
     } else {
       setEmail('admin@petcare.org');
-      setPassword('AdminPass123!');
     }
   };
 

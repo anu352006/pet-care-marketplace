@@ -15,17 +15,18 @@
 --   Option B: React Web App -> Register page (/register)
 --
 -- RECOMMENDED DEMO ACCOUNTS TO ADD IN SUPABASE AUTHENTICATION:
+-- (Set strong, unique passwords per account in Supabase Dashboard -> Authentication -> Users)
 -- -----------------------------------------------------------------------------------
--- | Role             | Email Address               | Suggested Password |
--- |------------------|-----------------------------|--------------------|
--- | Pet Owner        | priya.petowner@example.com  | OwnerPass123!      |
--- | Provider (Vet)   | aarav.vet@example.com       | ProviderPass123!   |
--- | Provider (Groom) | pooja.grooming@example.com  | ProviderPass123!   |
--- | Provider (Board) | rohan.happytails@example.com| ProviderPass123!   |
--- | Provider (Train) | vikram.k9@example.com       | ProviderPass123!   |
--- | Provider (Walk)  | ananya.walkers@example.com  | ProviderPass123!   |
--- | Provider (Taxi)  | karthik.petride@example.com | ProviderPass123!   |
--- | Administrator    | admin@petcare.org           | AdminPass123!      |
+-- | Role             | Email Address               | Status                             |
+-- |------------------|-----------------------------|------------------------------------|
+-- | Pet Owner        | priya.petowner@example.com  | Core Pet Owner Account             |
+-- | Provider (Vet)   | aarav.vet@example.com       | Core Veterinary Specialist Account |
+-- | Provider (Groom) | pooja.grooming@example.com  | Grooming Specialist Account        |
+-- | Provider (Board) | rohan.happytails@example.com| Boarding Specialist Account        |
+-- | Provider (Train) | vikram.k9@example.com       | Training Specialist Account        |
+-- | Provider (Walk)  | ananya.walkers@example.com  | Pet Walking Specialist Account     |
+-- | Provider (Taxi)  | karthik.petride@example.com | Pet Transit Specialist Account     |
+-- | Administrator    | admin@petcare.org           | Platform Governance Administrator  |
 -- -----------------------------------------------------------------------------------
 --
 -- Note: Even if you only create 2 accounts (priya.petowner@example.com and aarav.vet@example.com),
