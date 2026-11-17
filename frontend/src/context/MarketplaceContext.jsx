@@ -167,7 +167,7 @@ export const MarketplaceProvider = ({ children }) => {
         setProviders(mappedProviders);
       }
 
-      // 2. Fetch Active Marketplace Services with joined Provider details
+      // 2. Fetch Active Marketplace Services (provider details safely resolved from dbProviders)
       const { data: dbServices, error: servErr } = await supabase
         .from('services')
         .select(`
@@ -182,16 +182,7 @@ export const MarketplaceProvider = ({ children }) => {
           duration,
           available_slots,
           featured,
-          active,
-          providers (
-            id,
-            business_name,
-            location,
-            verified,
-            users (
-              full_name
-            )
-          )
+          active
         `)
         .eq('active', true)
         .order('created_at', { ascending: false });
@@ -356,7 +347,7 @@ export const MarketplaceProvider = ({ children }) => {
         setBookings(mappedBookings);
       }
 
-      // 5. Fetch Reviews
+      // 5. Fetch Reviews (provider details safely resolved from dbProviders)
       const { data: dbReviews, error: revErr } = await supabase
         .from('reviews')
         .select(`
@@ -367,9 +358,7 @@ export const MarketplaceProvider = ({ children }) => {
           user_id,
           provider_id,
           service_id,
-          users (full_name),
-          services (title),
-          providers (business_name)
+          services (title)
         `)
         .order('created_at', { ascending: false });
 
