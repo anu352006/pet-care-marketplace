@@ -511,6 +511,20 @@ BEGIN
     -- Therefore, NOT EXISTS clauses below provide DML-level idempotency only and
     -- do not provide database-level concurrency safety against race conditions.
     -- Strict uniqueness and absence of duplicates are verified post-seed in Section 11.
+
+    -- Reconcile previous seed availability slots from earlier calendar runs:
+    -- Safely remove existing seed-generated slots for the 6 providers where dates are
+    -- outside the intended rolling window, preventing stale slot accumulation across days.
+    DELETE FROM public.availability
+    WHERE (
+        (provider_id = p1_id AND start_time = '09:00:00'::TIME AND end_time = '18:00:00'::TIME AND date NOT IN ((CURRENT_DATE + INTERVAL '1 day')::DATE, (CURRENT_DATE + INTERVAL '2 days')::DATE))
+        OR (provider_id = p2_id AND start_time = '10:00:00'::TIME AND end_time = '19:00:00'::TIME AND date NOT IN ((CURRENT_DATE + INTERVAL '1 day')::DATE, (CURRENT_DATE + INTERVAL '2 days')::DATE, (CURRENT_DATE + INTERVAL '3 days')::DATE))
+        OR (provider_id = p3_id AND start_time = '08:00:00'::TIME AND end_time = '20:00:00'::TIME AND date NOT IN ((CURRENT_DATE + INTERVAL '1 day')::DATE, (CURRENT_DATE + INTERVAL '2 days')::DATE))
+        OR (provider_id = p4_id AND start_time = '07:00:00'::TIME AND end_time = '17:00:00'::TIME AND date NOT IN ((CURRENT_DATE + INTERVAL '1 day')::DATE, (CURRENT_DATE + INTERVAL '2 days')::DATE))
+        OR (provider_id = p5_id AND start_time = '06:00:00'::TIME AND end_time = '19:00:00'::TIME AND date NOT IN ((CURRENT_DATE + INTERVAL '1 day')::DATE, (CURRENT_DATE + INTERVAL '2 days')::DATE))
+        OR (provider_id = p6_id AND start_time = '08:00:00'::TIME AND end_time = '20:00:00'::TIME AND date NOT IN ((CURRENT_DATE + INTERVAL '1 day')::DATE, (CURRENT_DATE + INTERVAL '2 days')::DATE))
+    );
+
     -- Provider 1: Dr. Aarav Sharma (Bengaluru)
     INSERT INTO public.availability (provider_id, date, start_time, end_time)
     SELECT p1_id, (CURRENT_DATE + INTERVAL '1 day')::DATE, '09:00:00'::TIME, '18:00:00'::TIME
@@ -718,6 +732,16 @@ BEGIN
         END IF;
     END;
 
+    -- Reconcile previous seed Booking 1 if it exists with past date from an earlier calendar run
+    DELETE FROM public.bookings
+    WHERE user_id = owner_uid
+      AND pet_id = pet1_id
+      AND provider_id = p1_id
+      AND service_id = s1_id
+      AND booking_time = '11:00 AM'
+      AND total_price = 850.00
+      AND booking_date != (CURRENT_DATE + INTERVAL '1 day')::DATE;
+
     IF pet1_id IS NOT NULL THEN
         INSERT INTO public.bookings (pet_id, service_id, provider_id, user_id, booking_date, booking_time, status, total_price, booking_notes)
         SELECT pet1_id, s1_id, p1_id, owner_uid, (CURRENT_DATE + INTERVAL '1 day')::DATE, '11:00 AM', 'CONFIRMED'::public.booking_status, 850.00, 'Routine annual general checkup & wellness review.'
@@ -872,6 +896,16 @@ BEGIN
                 USING ERRCODE = 'P0003';
         END IF;
     END;
+
+    -- Reconcile previous seed Booking 2 under p2_id if it exists with date from an earlier calendar run
+    DELETE FROM public.bookings
+    WHERE user_id = owner_uid
+      AND pet_id = pet2_id
+      AND provider_id = p2_id
+      AND service_id = s2_id
+      AND booking_time = '01:00 PM'
+      AND total_price = 1800.00
+      AND booking_date != (CURRENT_DATE + INTERVAL '3 days')::DATE;
 
     IF pet2_id IS NOT NULL THEN
         INSERT INTO public.bookings (pet_id, service_id, provider_id, user_id, booking_date, booking_time, status, total_price, booking_notes)
