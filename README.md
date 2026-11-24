@@ -1,196 +1,218 @@
 # 🐾 Pet Care & Services Marketplace
-### Full-Stack AI-Powered Web Application
-*Academic Project for Master Program in AI Full Stack Development*
+### Modern Full-Stack AI-Powered Marketplace for Pet Parents, Care Providers & Veterinary Specialists
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-success?style=for-the-badge&logo=vercel)](https://pet-care-marketplace.vercel.app/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/anu352006/pet-care-marketplace)
+[![React](https://img.shields.io/badge/Frontend-React%2018%20%7C%20Vite-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
+[![Supabase](https://img.shields.io/badge/Backend-Supabase%20%7C%20PostgreSQL%2015-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com/)
 
 ---
 
-## 🌟 1. Project Overview
+## 🌟 1. Project Overview & Mission
 
-**Pet Care & Services Marketplace** is a modern, responsive web application connecting loving pet parents with certified veterinary doctors, luxury grooming salons, resort boarders, dog-walkers, and certified trainers across major Indian cities (Bengaluru, Mumbai, Delhi NCR, Pune, Hyderabad, and Chennai).
+**Pet Care & Services Marketplace** is a full-stack, cloud-native web application designed to connect pet parents with certified veterinary doctors, professional pet groomers, boarding resorts, dog walkers, and certified trainers across major metropolitan hubs in India (Bengaluru, Mumbai, Delhi NCR, Hyderabad, Pune, and Chennai).
 
-The application features:
-- **Interactive Marketplace**: Search and multi-filter across 8 categories with pricing in Indian Rupees (₹).
-- **Conflict-Free Booking System**: Live slot reservation with duplicate conflict prevention.
-- **Pet Profile Management**: Full digital health passports including photos, age, breed, vaccination history, and medical records.
-- **Role-Based Portals**: Tailored dashboards for **Pet Owners**, **Service Providers**, and **System Administrators**.
-- **AI Pet Care Assistant**: 24/7 intelligent pet wellness companion with strict veterinary clinical triage guardrails and personalized advice based on pet profile.
-- **AI Recommendation Engine**: Contextual recommendations matching pet breed, age, and wellness history.
+### 🎯 Problems Addressed:
+1. **Fragmented Pet Care Discovery**: Pet owners often struggle to locate verified, high-quality care options within their city.
+2. **Double-Booking & Scheduling Conflicts**: Traditional appointment systems lack strict database-level conflict prevention.
+3. **Decentralized Pet Health Records**: Pet vaccinations, medical notes, allergies, and health history are scattered across paper booklets.
+4. **Emergency Health Confusion**: Pet parents often panic during sudden health emergencies or administer dangerous human medication.
 
----
-
-## 🛠️ 2. Technology Stack
-
-| Layer | Technologies Used |
-| :--- | :--- |
-| **Frontend** | React 18, Vite, React Router v6, @supabase/supabase-js, Lucide Icons, Modern Responsive CSS3 |
-| **Backend & Cloud** | **Supabase** (PostgreSQL 15, Supabase Auth / JWT, Storage, Edge Functions, Row Level Security) *(Legacy Spring Boot 3 & MySQL preserved in `/backend` and `/database`)* |
-| **Database** | Supabase PostgreSQL with 9 Relational Tables, Custom ENUMs, Triggers, and RLS Policies |
-| **File Storage** | Supabase Storage (`pet-images`, `provider-images`, `service-images`) |
-| **AI Integration** | Supabase Edge Function (`ai-assistant`) securely routing to external LLMs with clinical triage guardrails |
-| **Design System** | Forest Green (`#1E3F20`), Sage Green (`#4E7A58`), Warm Terracotta (`#E07A5F`), Off-White Canvas (`#F8F9F5`) |
+### 💡 The Solution:
+A unified, multi-tenant digital marketplace providing **instant service discovery**, **guaranteed conflict-free appointment booking**, **digital Pet Health Passports**, and a **24/7 AI Pet Health Assistant** equipped with veterinary clinical triage guardrails.
 
 ---
 
-## 📂 3. Project Directory Structure
+## 🌐 Live Application Links
 
-```
-pet-care-marketplace/
-│
-├── frontend/                     # React + Vite Single Page Application
-│   ├── public/                   # Static assets & SVG icons
-│   ├── src/
-│   │   ├── components/           # Reusable components (ServiceCard, BookingModal, ScrollToTop)
-│   │   ├── context/              # AuthContext (Supabase Auth) & MarketplaceContext (PostgreSQL CRUD)
-│   │   ├── layouts/              # Navbar (with 1-click Role Switcher) & Footer
-│   │   ├── pages/                # Home, Services, Detail, Dashboards, AI Assistant, Auth
-│   │   ├── services/             # supabaseClient.js, aiService.js, mockData.js fallback
-│   │   ├── styles/               # Design tokens (variables.css) & global stylesheets
-│   │   ├── App.jsx               # Client-side router configuration
-│   │   └── main.jsx              # React DOM entrypoint
-│   ├── .env.example              # Supabase URL & Anon Key template
-│   └── package.json              # Frontend scripts & dependencies
-│
-├── supabase/                     # Complete Supabase Backend Artifacts
-│   ├── schema.sql                # 9 relational tables, ENUMs, triggers, and RLS policies
-│   ├── storage.sql               # Storage bucket creation and access policies
-│   ├── seed.sql                  # Seed data for Indian cities, providers, services, pets
-│   └── functions/
-│       └── ai-assistant/         # Deno TypeScript Edge Function for secure AI & triage
-│
-├── docs/                         # Architecture & Setup Documentation
-│   ├── supabase-setup.md         # Comprehensive Supabase implementation guide
-│   ├── api-documentation.md      # API contracts & schema references
-│   └── project-documentation.md  # Master's program technical overview
-│
-├── backend/                      # Reference Java Spring Boot layered backend
-└── database/                     # Reference MySQL Workbench schema
-```
-│   │   ├── security/             # JwtUtils, JwtAuthFilter, UserDetailsServiceImpl
-│   │   ├── service/              # Core business services & AI clinical triage logic
-│   │   └── PetCareMarketplaceApplication.java
-│   ├── src/main/resources/
-│   │   └── application.properties # Database connection & JWT configuration
-│   └── pom.xml                   # Maven dependencies & build configuration
-│
-├── database/                     # MySQL Database Assets
-│   ├── schema.sql                # Complete relational schema (9 tables, constraints, foreign keys)
-│   └── sample-data.sql           # Pre-seeded users, 6 providers, 12 services, pets, bookings
-│
-├── docs/                         # Academic Documentation
-│   ├── project-documentation.md  # Comprehensive project report & architecture details
-│   └── api-documentation.md      # REST API endpoints & Postman payload references
-│
-├── run-frontend.bat              # 1-Click Windows script to launch React frontend
-├── run-backend.bat               # 1-Click Windows script to launch Spring Boot backend
-└── README.md                     # Setup guide & instructions
-```
+- **Production Web Application**: [https://pet-care-marketplace.vercel.app/](https://pet-care-marketplace.vercel.app/)
+- **GitHub Repository**: [https://github.com/anu352006/pet-care-marketplace](https://github.com/anu352006/pet-care-marketplace)
 
 ---
 
-## 🚀 4. Step-by-Step Setup & Execution
+## ✨ 2. Key Features by User Role
 
-### Prerequisites Installed on Machine
-- **Node.js**: v20+ or v22+ (`node -v`)
-- **Java Development Kit (JDK)**: Java 21+ (`C:\Program Files\Java\jdk-25` is installed)
-- **MySQL Server 8.0 & MySQL Workbench** (`C:\Program Files\MySQL\MySQL Server 8.0`)
+### 🐾 For Pet Owners
+- **Marketplace Discovery & Smart Filters**: Search across 8 service categories (Veterinary Care, Grooming, Boarding, Training, Walking, Pet Sitting, Nutrition, Pet Taxi) with real-time filters by city, price range (in ₹ INR), and rating.
+- **Conflict-Free Appointment Booking**: Book appointments with specific registered pets, selecting available provider time slots with instant confirmation receipts (`BK-XXXX`).
+- **Digital Pet Health Passports (`/pets`)**: Centralized digital profiles for each pet, storing photo, breed, age, weight, allergies, dietary guidelines, and vaccination history.
+- **24/7 AI Pet Health Assistant (`/ai-assistant`)**: Intelligent conversational triage assistant providing immediate care advice, breed-specific wellness tips, emergency toxicity warnings (e.g. chocolate, xylitol), and pharmacological safeguards preventing dangerous human drug administration.
+- **My Bookings Dashboard (`/owner-dashboard`)**: Track active, completed, and pending appointment requests with live status updates.
 
----
+### 🩺 For Service Providers
+- **Provider Business Profile (`/provider-dashboard`)**: Manage clinic name, service bio, physical address, business hours, and professional verification badges.
+- **Appointment Request Console**: Review incoming booking requests in real time with 1-click **Accept** or **Reject** actions.
+- **Revenue & Analytics Tracking**: Monitor completed appointments, total platform earnings in ₹ INR, and upcoming appointments.
+- **Service Catalog Management**: Add, update, or remove specialized service offerings with custom pricing, duration, and descriptions.
 
-### Step A: Set Up MySQL Database
-
-1. Open **MySQL Workbench** or your terminal.
-2. Connect to your local MySQL instance (default: `localhost:3306`, user: `root`).
-3. Open and execute the script:
-   ```
-   database/schema.sql
-   ```
-   *(This creates the database `pet_care_marketplace` and all 9 tables).*
-4. Open and execute the seed script:
-   ```
-   database/sample-data.sql
-   ```
-   *(This populates realistic Indian service providers, clinics, pet profiles, and appointments).*
+### 🛡️ For System Administrators
+- **Governance & Compliance Master Console (`/admin`)**:
+  - **Provider Verification Queue**: Review submitted clinic documents, license numbers, and toggle **Approve & Verify** badges.
+  - **Platform-Wide Booking Oversight**: Monitor all bookings, filter by status (`pending`, `confirmed`, `completed`, `cancelled`), and inspect dispute details.
+  - **Catalog Hygiene**: Audit published services across all categories and cities to maintain high marketplace standards.
 
 ---
 
-### Step B: Run the React Frontend (Instant UI Access)
+## 🛠️ 3. Technology Stack & Architecture
 
-1. Open a terminal in the project root:
-   ```powershell
-   cd frontend
-   npm run dev
-   ```
-   *Or simply double-click `run-frontend.bat` on Windows!*
-2. Open your browser and navigate to:
-   ```
-   http://localhost:5173
-   ```
-3. The frontend runs immediately with full interactive capabilities, pre-loaded mock datasets, search filters, booking modals, and the AI Assistant!
+| Layer | Technologies & Tools | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | React 18, Vite 5, React Router v6, Lucide Icons | High-performance Single Page Application (SPA) with responsive UI/UX |
+| **Styling** | Modern CSS3 Design Tokens, Flexbox/Grid | Custom pet-care aesthetic with natural tones (Forest Green, Sage, Terracotta) |
+| **Backend / DB** | **Supabase** (PostgreSQL 15) | Relational database with 9 core tables, custom ENUMs, and automated triggers |
+| **Authentication** | Supabase Auth (JWT) | Secure token-based session management with role-based routing |
+| **Data Protection** | PostgreSQL Row-Level Security (RLS) | Strict database-level isolation protecting user data, bookings, and private profiles |
+| **Scheduling Engine** | PostgreSQL `btree_gist` Exclusion Constraints | Prevents overlapping provider slots and simultaneous double-bookings |
+| **File Storage** | Supabase Storage (`pet-images`, `provider-images`, `service-images`) | Secure cloud media storage with user-isolated folder access |
+| **AI Companion** | Supabase Edge Functions (Deno / TypeScript) | LLM integration with strict clinical triage guardrails and emergency protocols |
+| **Hosting & CI/CD** | **Vercel** + **GitHub Actions** | Automated production deployments on every push to `main` |
 
 ---
 
-### Step C: Run the Spring Boot Backend
+## 🔒 4. Security & Database Design
 
-1. In `backend/src/main/resources/application.properties`, verify your MySQL password:
-   ```properties
-   spring.datasource.username=root
-   spring.datasource.password=YOUR_MYSQL_PASSWORD
-   ```
-2. Open a second terminal window in the project root:
-   ```powershell
-   cd backend
-   mvn spring-boot:run
-   ```
-   *Or simply double-click `run-backend.bat` on Windows!*
-3. The backend will initialize on:
-   ```
-   http://localhost:8080
-   ```
+The application implements defense-in-depth security:
+1. **Row-Level Security (RLS)**: Enforced on all tables (`users`, `providers`, `services`, `bookings`, `pets`, `reviews`, `notifications`, `availability`). Pet owners can only access their own pets and bookings; providers can only view bookings assigned to them.
+2. **Signup Privilege Escalation Protection**: Database triggers (`handle_new_user`) ensure all public signups default strictly to `pet_owner`, preventing unauthorized self-elevation to `admin`.
+3. **No-Overlap Availability Protection**: Uses PostgreSQL GiST exclusion constraints (`chk_availability_no_overlap`) with the `btree_gist` extension, guaranteeing no conflicting time intervals can be scheduled.
+4. **Sanitized Public Views**: Public visitor discovery queries use sanitized views (`public.public_providers_view`) that redact internal user IDs, phone numbers, and private data.
+5. **Storage Bucket Hardening**: Image uploads are isolated to user-owned folder namespaces with strict MIME type (`image/jpeg`, `image/png`, `image/webp`) and file-size constraints.
 
 ---
 
 ## 🔑 5. Pre-Seeded Evaluation Accounts
 
-The navigation bar features an **Instant Role Switcher Banner** at the top, allowing academic evaluators to switch between all three roles in one click. Alternatively, you can log in manually:
+The web application features an **Instant Role Switcher Banner** at the top of the screen for seamless academic and grading evaluation. You can also sign in manually with these credentials:
 
 | Role | Email Address | Password | Focus Modules |
 | :--- | :--- | :--- | :--- |
-| **Pet Owner** | `priya.petowner@example.com` | `Password123!` | Pet profiles, book services, view bookings, AI triage |
-| **Service Provider** | `aarav.vet@example.com` | `Password123!` | Accept/reject appointments, add services, view revenue |
-| **Administrator** | `ananya03052006@gmail.com` | `Password123!` | Verify providers, monitor all bookings, catalog hygiene |
+| **Pet Owner** | `priya.petowner@example.com` | `Password123!` | Pet profiles, appointment booking, bookings list, AI triage |
+| **Service Provider** | `aarav.vet@example.com` | `Password123!` | Accept/reject appointments, view earnings, manage services |
+| **Administrator** | `ananya03052006@gmail.com` | *(Your Admin Password)* | Verify providers, audit all bookings, catalog hygiene |
 
 ---
 
-## 🧪 6. Testing Key Application Features
+## 📂 6. Project Directory Structure
 
-1. **Marketplace Discovery & Filters**:
-   - Go to **Services**.
-   - Filter by city (e.g. `Bengaluru` or `Mumbai`), select category `Veterinary Consultation` or `Pet Grooming`, and adjust the price slider.
-2. **Conflict-Free Appointment Booking**:
+```text
+pet-care-marketplace/
+│
+├── frontend/                          # React 18 + Vite Single Page Application
+│   ├── public/                        # Static assets, logos, and images
+│   ├── src/
+│   │   ├── components/                # Reusable UI components (Navbar, Footer, ProtectedRoute, ServiceCard)
+│   │   ├── context/                   # Global State (AuthContext, MarketplaceContext)
+│   │   ├── layouts/                   # Layout wrappers and Navigation bars
+│   │   ├── pages/                     # Application views (Home, Services, Dashboards, AI Assistant)
+│   │   ├── services/                  # Supabase Client, API services, and AI triage logic
+│   │   ├── styles/                    # Global design tokens and responsive CSS
+│   │   ├── App.jsx                    # Client-side routing configuration
+│   │   └── main.jsx                   # React entry point
+│   ├── index.html                     # HTML5 shell
+│   ├── package.json                   # Dependencies and scripts
+│   └── vite.config.js                 # Vite bundler configuration
+│
+├── supabase/                          # Supabase Cloud Database Infrastructure
+│   ├── migrations/                    # Versioned database migrations & security scripts
+│   │   ├── production_security_migration_FINAL.sql  # Complete hardened RLS & security schema
+│   │   ├── production_security_precheck_FINAL.sql   # Pre-migration verification checks
+│   │   ├── production_security_verification_FINAL.sql # 43 automated security assertion tests
+│   │   └── production_security_rollback_FINAL.md    # Multi-tier recovery & disaster rollback plan
+│   ├── schema.sql                     # Full PostgreSQL relational schema & triggers
+│   ├── seed.sql                       # Demonstration seed data for Indian cities
+│   ├── storage.sql                    # Cloud storage bucket creation and policies
+│   └── functions/                     # Supabase Edge Functions
+│       └── ai-assistant/              # Deno/TypeScript AI triage function
+│
+├── docs/                              # Technical & Architecture Documentation
+│   ├── project-documentation.md       # Comprehensive architecture report
+│   ├── api-documentation.md           # API reference & data models
+│   └── supabase-setup.md              # Supabase cloud setup instructions
+│
+├── backend/                           # Reference Spring Boot backend (for reference/archival)
+├── database/                          # Reference MySQL scripts (for reference/archival)
+└── README.md                          # Project documentation
+```
+
+---
+
+## 🚀 7. Local Development Setup
+
+To run the application locally on your machine:
+
+### Prerequisites:
+- **Node.js**: v18.0.0 or higher (`node -v`)
+- **npm**: v9.0.0 or higher (`npm -v`)
+- **Git**: Installed and configured
+
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/anu352006/pet-care-marketplace.git
+cd pet-care-marketplace
+```
+
+### Step 2: Install Dependencies
+```bash
+cd frontend
+npm install
+```
+
+### Step 3: Configure Environment Variables
+Create a `.env` file inside the `frontend/` directory:
+```env
+VITE_SUPABASE_URL=https://uuhxfrobjbysasznothx.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_publishable_anon_key
+```
+
+### Step 4: Start the Development Server
+```bash
+npm run dev
+```
+Open your browser and navigate to: `http://localhost:5173`
+
+### Step 5: Build for Production
+```bash
+npm run build
+```
+
+---
+
+## 🧪 8. Key User Journeys to Test
+
+1. **Browse & Filter Services**:
+   - Go to **Services** in the top navigation.
+   - Filter by City (e.g. *Bengaluru*), Category (e.g. *Veterinary Consultation*), and adjust the price slider.
+2. **Book an Appointment**:
    - Click **Book Now** on any service.
-   - Select one of Priya's registered pets (`Bruno` or `Mochi`).
-   - Pick a date and time slot.
-   - Confirm booking to generate an instant `BK-XXXX` confirmation receipt.
-3. **Pet Health Passport Management**:
+   - Select a pet (e.g., *Bruno* or *Mochi*), select a date and an available time slot.
+   - Click **Confirm Booking** to receive an instant booking code.
+3. **Manage Pet Health Passports**:
    - Go to **My Pets** (`/pets`).
-   - Click **Add New Pet** to register a new companion with vaccinations and dietary notes, or edit Bruno's profile.
-4. **AI Pet Care Assistant**:
+   - Add a new pet with vaccination records and dietary restrictions.
+4. **Interact with AI Pet Assistant**:
    - Navigate to **AI Assistant** (`/ai-assistant`).
-   - Select **Bruno (Golden Retriever, 3y)** in the context dropdown.
-   - Click one of the starter chips or ask:
-     - *"What vegetables are safe to feed Bruno?"*
-     - *"My dog swallowed dark chocolate and is trembling!"* (Notice the **Emergency Triage Warning**).
-     - *"Can I give 500mg Paracetamol for fever?"* (Notice the **Pharmacological Protection Warning**).
-5. **Provider Appointment Console**:
-   - Switch role to **Service Provider** using the top banner.
-   - Navigate to `/provider-dashboard`.
-   - Accept or Reject pending appointments and view your calculated revenue in ₹ INR.
-6. **Administrator Compliance Console**:
-   - Switch role to **Administrator** using the top banner.
-   - Navigate to `/admin`.
-   - Toggle **Approve & Verify** on unverified clinic providers.
+   - Ask nutritional questions (e.g., *"Can dogs eat carrots?"*).
+   - Test safety triage (e.g., *"My puppy ate paracetamol"* or *"My dog ate dark chocolate"*). Observe the high-priority **Emergency Veterinary Warning**.
+5. **Provider Console**:
+   - Switch role to **Service Provider** (or login as `aarav.vet@example.com`).
+   - Accept or reject appointments and inspect calculated revenue.
+6. **Administrator Governance**:
+   - Switch role to **Admin** (or login as `ananya03052006@gmail.com`).
+   - View provider verification queue, approve pending clinics, and inspect all platform bookings.
 
 ---
 
-## 📜 7. Academic Declaration
-This project was conceptualized, designed, and developed for the **Master Program in AI Full Stack Development**. All code follows strict layered design principles, clean separation of concerns, and security best practices.
+## 📜 9. Academic & Technical Declaration
+
+This project was conceptualized, architected, and engineered for the **Master Program in AI Full Stack Development**. It demonstrates mastery in:
+- Modern frontend engineering with React, Vite, and component-driven architecture.
+- Cloud-native relational database modeling with PostgreSQL 15 and Supabase.
+- Rigorous security implementation using Row-Level Security (RLS) and cryptographic tokens.
+- Enterprise-grade database constraint design for scheduling conflict prevention.
+- AI prompt engineering with clinical triage and safety guardrails.
+- Seamless CI/CD automated deployment with GitHub and Vercel.
+
+---
+
+## 📄 License
+This project is open-source under the [MIT License](LICENSE).
