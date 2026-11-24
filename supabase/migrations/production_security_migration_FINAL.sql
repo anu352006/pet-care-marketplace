@@ -1,5 +1,5 @@
 -- ============================================================================
--- PRODUCTION SECURITY MIGRATION (FINAL)
+-- PRODUCTION SECURITY MIGRATION (FINAL - REVISED)
 -- Target Project: Production Supabase (Project ID: uuhxfrobjbysasznothx)
 -- Mode: PROPOSAL ONLY — DO NOT EXECUTE WITHOUT EXPLICIT USER APPROVAL
 -- Author: Antigravity Deepmind Agent
@@ -11,14 +11,19 @@
 -- 2. Eliminates role self-assignment to admin via auth signup metadata in handle_new_user().
 -- 3. Installs prevent_user_role_escalation trigger on public.users.
 -- 4. Installs prevent_provider_verification_tampering trigger on public.providers.
--- 5. Installs validate_booking_transition_and_fields trigger on public.bookings.
+-- 5. Installs validate_booking_transition_and_fields trigger on public.bookings:
 --    - Enforces catalog price match on creation while preserving historical prices on update.
+--    - Strict authorization: non-owner/non-provider/non-admin completely blocked (no fall-through).
 --    - Validates state machine transitions (pending -> confirmed/rejected -> completed/cancelled).
 --    - Validates pet ownership, provider verification, service active state, and date/time.
--- 6. Creates sanitized public.provider_public_profiles view (zero private PII exposed).
--- 7. Restricts public.users read access strictly to profile owner and platform administrators.
--- 8. Restricts review creation to authors who completed the referenced appointment.
--- 9. Enforces user folder namespacing and 5MB / MIME whitelisting on all storage buckets.
+-- 6. Installs validate_review_integrity trigger on public.reviews:
+--    - Enforces that reviews can only be submitted for COMPLETED bookings belonging to author.
+--    - Guarantees immutability of user_id, booking_id, provider_id, and service_id on UPDATE.
+--    - Restricts updates to author and admin only.
+-- 7. Creates sanitized public.provider_public_profiles view (zero private PII exposed).
+-- 8. Restricts public.users read access strictly to profile owner and platform administrators.
+-- 9. Enforces verified provider status (is_verified_provider) and user folder namespacing
+--    along with 5MB file-size limit and image MIME-whitelist on storage buckets.
 -- 10. Adds chronological availability check, unique slot index, and unique review index.
 -- ============================================================================
 
@@ -64,7 +69,26 @@ BEGIN
 END;
 $function$;
 
--- Function 1.3: is_owner() helper function with explicit pg_catalog search path
+-- Function 1.3: is_verified_provider() helper function
+-- Strictly validates that the caller owns an active, verified provider profile
+CREATE OR REPLACE FUNCTION public.is_verified_provider()
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public', 'auth'
+AS $function$
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN FALSE;
+    END IF;
+    RETURN EXISTS (
+        SELECT 1 FROM public.providers
+        WHERE user_id = auth.uid() AND verified = true
+    );
+END;
+$function$;
+
+-- Function 1.4: is_owner() helper function with explicit pg_catalog search path
 CREATE OR REPLACE FUNCTION public.is_owner()
 RETURNS boolean
 LANGUAGE plpgsql
@@ -81,6 +105,12 @@ BEGIN
     );
 END;
 $function$;
+
+-- Grant execution privileges on helper functions
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_provider() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_verified_provider() TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.is_owner() TO anon, authenticated, service_role;
 
 
 -- ============================================================================
@@ -216,7 +246,7 @@ BEGIN
     IF TG_OP = 'UPDATE' THEN
         IF NEW.verified IS DISTINCT FROM OLD.verified THEN
             IF NOT (public.is_admin() OR auth.role() = 'service_role' OR session_user IN ('postgres', 'supabase_admin')) THEN
-                RAISE EXCEPTION 'Security Violation: Only platform administrators can modify provider verification status.'
+                RAISE EXCEPTION 'Security Violation: Only platform administrators can change provider verification status.'
                     USING ERRCODE = '42501';
             END IF;
         END IF;
@@ -368,6 +398,12 @@ BEGIN
 
         is_provider_party := (auth.uid() IS NOT NULL AND auth.uid() = booking_prov_user_id);
 
+        -- Strict actor authorization guard: Unrelated actors cannot modify bookings
+        IF NOT (is_admin_actor OR is_owner_party OR is_provider_party) THEN
+            RAISE EXCEPTION 'Security Violation: You are not authorized to modify this booking.'
+                USING ERRCODE = '42501';
+        END IF;
+
         -- Immutable core identity fields
         IF NEW.id IS DISTINCT FROM OLD.id THEN
             RAISE EXCEPTION 'Security Violation: Booking ID is immutable.' USING ERRCODE = '42501';
@@ -429,14 +465,13 @@ BEGIN
             END IF;
         END IF;
 
-        -- Status Transition Matrix Authorization
+        -- Status Transition Matrix Authorization (ZERO fall-through)
         IF NEW.status IS DISTINCT FROM OLD.status THEN
             -- Universal terminal state check
             IF OLD.status IN ('COMPLETED', 'CANCELLED', 'REJECTED') THEN
                 RAISE EXCEPTION 'Security Violation: Cannot transition booking out of terminal state %.', OLD.status USING ERRCODE = '42501';
             END IF;
 
-            -- Admin transitions (flexible for governance)
             IF is_admin_actor THEN
                 IF OLD.status = 'PENDING' AND NEW.status IN ('CONFIRMED', 'CANCELLED', 'REJECTED', 'COMPLETED') THEN
                     RETURN NEW;
@@ -445,10 +480,7 @@ BEGIN
                 ELSE
                     RAISE EXCEPTION 'Security Violation: Invalid administrative status transition from % to %.', OLD.status, NEW.status USING ERRCODE = '42501';
                 END IF;
-            END IF;
-
-            -- Dual-party actor (both owner and provider)
-            IF is_owner_party AND is_provider_party THEN
+            ELSIF is_owner_party AND is_provider_party THEN
                 IF OLD.status = 'PENDING' AND NEW.status IN ('CONFIRMED', 'CANCELLED', 'REJECTED') THEN
                     RETURN NEW;
                 ELSIF OLD.status = 'CONFIRMED' AND NEW.status IN ('COMPLETED', 'CANCELLED') THEN
@@ -456,19 +488,13 @@ BEGIN
                 ELSE
                     RAISE EXCEPTION 'Security Violation: Invalid dual-party transition from % to %.', OLD.status, NEW.status USING ERRCODE = '42501';
                 END IF;
-            END IF;
-
-            -- Pet owner transitions (can only cancel)
-            IF is_owner_party THEN
+            ELSIF is_owner_party THEN
                 IF OLD.status IN ('PENDING', 'CONFIRMED') AND NEW.status = 'CANCELLED' THEN
                     RETURN NEW;
                 ELSE
                     RAISE EXCEPTION 'Security Violation: Pet owners can only cancel active bookings (attempted transition from % to %).', OLD.status, NEW.status USING ERRCODE = '42501';
                 END IF;
-            END IF;
-
-            -- Provider transitions (Confirm, Reject, Complete, Cancel)
-            IF is_provider_party THEN
+            ELSIF is_provider_party THEN
                 IF OLD.status = 'PENDING' AND NEW.status IN ('CONFIRMED', 'REJECTED') THEN
                     RETURN NEW;
                 ELSIF OLD.status = 'CONFIRMED' AND NEW.status IN ('COMPLETED', 'CANCELLED') THEN
@@ -476,6 +502,8 @@ BEGIN
                 ELSE
                     RAISE EXCEPTION 'Security Violation: Providers cannot transition booking from % to %.', OLD.status, NEW.status USING ERRCODE = '42501';
                 END IF;
+            ELSE
+                RAISE EXCEPTION 'Security Violation: You are not authorized to change the status of this booking.' USING ERRCODE = '42501';
             END IF;
         END IF;
 
@@ -495,10 +523,143 @@ CREATE TRIGGER trg_validate_booking_transition
 
 
 -- ============================================================================
--- SECTION 5: SANITIZED PUBLIC PROVIDER VIEW & BASE TABLE ACCESS
+-- SECTION 5: REVIEW INTEGRITY FUNCTION & TRIGGER
 -- ============================================================================
 
--- View 5.1: Create public.provider_public_profiles view
+CREATE OR REPLACE FUNCTION public.validate_review_integrity()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public', 'auth'
+AS $function$
+DECLARE
+    is_admin_actor BOOLEAN;
+    v_booking_user_id UUID;
+    v_booking_provider_id UUID;
+    v_booking_service_id UUID;
+    v_booking_status public.booking_status;
+BEGIN
+    is_admin_actor := public.is_admin() OR auth.role() = 'service_role' OR session_user IN ('postgres', 'supabase_admin');
+
+    -- ====================================================================
+    -- 1. INSERT VALIDATION
+    -- ====================================================================
+    IF TG_OP = 'INSERT' THEN
+        IF NOT is_admin_actor THEN
+            IF auth.uid() IS NULL OR NEW.user_id IS DISTINCT FROM auth.uid() THEN
+                RAISE EXCEPTION 'Security Violation: Review user_id must match the authenticated user.'
+                    USING ERRCODE = '42501';
+            END IF;
+        END IF;
+
+        -- Require valid booking reference
+        IF NEW.booking_id IS NULL THEN
+            RAISE EXCEPTION 'Validation Error: Review must be linked to a valid appointment booking.'
+                USING ERRCODE = '23502';
+        END IF;
+
+        -- Verify booking exists, is COMPLETED, and matches user_id and provider_id
+        SELECT user_id, provider_id, service_id, status 
+        INTO v_booking_user_id, v_booking_provider_id, v_booking_service_id, v_booking_status
+        FROM public.bookings
+        WHERE id = NEW.booking_id;
+
+        IF v_booking_status IS NULL THEN
+            RAISE EXCEPTION 'Validation Error: Referenced booking does not exist.'
+                USING ERRCODE = '23503';
+        END IF;
+
+        IF v_booking_status IS DISTINCT FROM 'COMPLETED'::public.booking_status THEN
+            RAISE EXCEPTION 'Security Violation: Reviews can only be submitted for COMPLETED bookings (current status: %).', v_booking_status
+                USING ERRCODE = '42501';
+        END IF;
+
+        IF v_booking_user_id IS DISTINCT FROM NEW.user_id THEN
+            RAISE EXCEPTION 'Security Violation: The booking does not belong to the review author.'
+                USING ERRCODE = '42501';
+        END IF;
+
+        IF v_booking_provider_id IS DISTINCT FROM NEW.provider_id THEN
+            RAISE EXCEPTION 'Security Violation: The designated provider does not match the booking provider.'
+                USING ERRCODE = '42501';
+        END IF;
+
+        -- Sync or validate service_id
+        IF NEW.service_id IS NULL THEN
+            NEW.service_id := v_booking_service_id;
+        ELSIF NEW.service_id IS DISTINCT FROM v_booking_service_id THEN
+            RAISE EXCEPTION 'Security Violation: The designated service does not match the booking service.'
+                USING ERRCODE = '42501';
+        END IF;
+
+        -- Validate rating range
+        IF NEW.rating IS NULL OR NEW.rating < 1 OR NEW.rating > 5 THEN
+            RAISE EXCEPTION 'Validation Error: Review rating must be an integer between 1 and 5.'
+                USING ERRCODE = '22003';
+        END IF;
+
+        RETURN NEW;
+    END IF;
+
+    -- ====================================================================
+    -- 2. UPDATE VALIDATION
+    -- ====================================================================
+    IF TG_OP = 'UPDATE' THEN
+        -- Immutable review linkage fields
+        IF NEW.id IS DISTINCT FROM OLD.id THEN
+            RAISE EXCEPTION 'Security Violation: Review ID is immutable.' USING ERRCODE = '42501';
+        END IF;
+
+        IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+            RAISE EXCEPTION 'Security Violation: Review author user_id is immutable.' USING ERRCODE = '42501';
+        END IF;
+
+        IF NEW.booking_id IS DISTINCT FROM OLD.booking_id THEN
+            RAISE EXCEPTION 'Security Violation: Review booking_id is immutable.' USING ERRCODE = '42501';
+        END IF;
+
+        IF NEW.provider_id IS DISTINCT FROM OLD.provider_id THEN
+            RAISE EXCEPTION 'Security Violation: Review provider_id is immutable.' USING ERRCODE = '42501';
+        END IF;
+
+        IF NEW.service_id IS DISTINCT FROM OLD.service_id THEN
+            RAISE EXCEPTION 'Security Violation: Review service_id is immutable.' USING ERRCODE = '42501';
+        END IF;
+
+        -- Validate actor authorization: only the author or an admin can update the review
+        IF NOT is_admin_actor THEN
+            IF auth.uid() IS NULL OR auth.uid() IS DISTINCT FROM OLD.user_id THEN
+                RAISE EXCEPTION 'Security Violation: You are not authorized to update this review.'
+                    USING ERRCODE = '42501';
+            END IF;
+        END IF;
+
+        -- Validate rating range
+        IF NEW.rating IS NULL OR NEW.rating < 1 OR NEW.rating > 5 THEN
+            RAISE EXCEPTION 'Validation Error: Review rating must be an integer between 1 and 5.'
+                USING ERRCODE = '22003';
+        END IF;
+
+        RETURN NEW;
+    END IF;
+
+    RETURN NEW;
+END;
+$function$;
+
+-- Trigger 5.1: Attach to public.reviews
+DROP TRIGGER IF EXISTS trg_validate_review_integrity ON public.reviews;
+CREATE TRIGGER trg_validate_review_integrity
+    BEFORE INSERT OR UPDATE ON public.reviews
+    FOR EACH ROW
+    EXECUTE FUNCTION public.validate_review_integrity();
+
+
+-- ============================================================================
+-- SECTION 6: SANITIZED PUBLIC PROVIDER VIEW & BASE TABLE ACCESS
+-- ============================================================================
+
+-- View 6.1: Create public.provider_public_profiles view
 -- Exposes ONLY non-sensitive fields; excludes user_id, email, phone, internal timestamps.
 CREATE OR REPLACE VIEW public.provider_public_profiles
 WITH (security_invoker = false)
@@ -521,12 +682,13 @@ WHERE pr.verified = true;
 GRANT SELECT ON public.provider_public_profiles TO anon, authenticated;
 
 -- Hardened RLS on public.providers
--- Drop targeted weak policies (preserves "Admin full control on providers")
 DROP POLICY IF EXISTS "Public can view providers" ON public.providers;
 DROP POLICY IF EXISTS "Provider can insert own profile" ON public.providers;
 DROP POLICY IF EXISTS "Provider can update own profile" ON public.providers;
+DROP POLICY IF EXISTS "Providers view own profile and admins" ON public.providers;
+DROP POLICY IF EXISTS "Providers can register business profile" ON public.providers;
+DROP POLICY IF EXISTS "Providers can update own business profile" ON public.providers;
 
--- Create scoped provider policies
 CREATE POLICY "Providers view own profile and admins"
     ON public.providers FOR SELECT
     USING ((auth.uid() = user_id) OR public.is_admin());
@@ -542,14 +704,14 @@ CREATE POLICY "Providers can update own business profile"
 
 
 -- ============================================================================
--- SECTION 6: PUBLIC.USERS RLS HARDENING (PRIVACY ENFORCEMENT)
+-- SECTION 7: PUBLIC.USERS RLS HARDENING (PRIVACY ENFORCEMENT)
 -- ============================================================================
 
--- Drop targeted permissive policy (preserves "Admin full control on users")
 DROP POLICY IF EXISTS "Public users profile read" ON public.users;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
+DROP POLICY IF EXISTS "Admins can view all user profiles" ON public.users;
 
--- Create privacy-hardened policies
 CREATE POLICY "Users can view own profile"
     ON public.users FOR SELECT
     USING (auth.uid() = id);
@@ -565,13 +727,14 @@ CREATE POLICY "Users can update own profile"
 
 
 -- ============================================================================
--- SECTION 7: PUBLIC.REVIEWS RLS HARDENING
+-- SECTION 8: PUBLIC.REVIEWS RLS HARDENING
 -- ============================================================================
 
--- Drop unverified insert policy (preserves "Admin full control on reviews" and "Public can view reviews")
 DROP POLICY IF EXISTS "Users can insert reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Authenticated users can submit reviews for completed bookings" ON public.reviews;
+DROP POLICY IF EXISTS "Authors can update own reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Authors and admins can delete reviews" ON public.reviews;
 
--- Create verified completed-booking review policy
 CREATE POLICY "Authenticated users can submit reviews for completed bookings"
     ON public.reviews FOR INSERT
     WITH CHECK (
@@ -590,7 +753,8 @@ CREATE POLICY "Authenticated users can submit reviews for completed bookings"
 
 CREATE POLICY "Authors can update own reviews"
     ON public.reviews FOR UPDATE
-    USING ((auth.uid() = user_id) OR public.is_admin());
+    USING ((auth.uid() = user_id) OR public.is_admin())
+    WITH CHECK ((auth.uid() = user_id) OR public.is_admin());
 
 CREATE POLICY "Authors and admins can delete reviews"
     ON public.reviews FOR DELETE
@@ -598,7 +762,7 @@ CREATE POLICY "Authors and admins can delete reviews"
 
 
 -- ============================================================================
--- SECTION 8: STORAGE BUCKET CONFIGURATION & RLS HARDENING
+-- SECTION 9: STORAGE BUCKET CONFIGURATION & VERIFIED PROVIDER POLICIES
 -- ============================================================================
 
 -- 1. Configure 5MB size limit and image MIME-types on all three buckets
@@ -607,7 +771,7 @@ SET file_size_limit = 5242880,
     allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 WHERE id IN ('pet-images', 'provider-images', 'service-images');
 
--- 2. Drop only the 9 targeted unnamespaced storage policies (preserves Public view policies)
+-- 2. Drop only the 9 targeted mutating storage policies (preserves Public Read CDN policies)
 DROP POLICY IF EXISTS "Authenticated users upload pet images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers can upload provider images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers can upload service images" ON storage.objects;
@@ -617,8 +781,17 @@ DROP POLICY IF EXISTS "Providers can update own provider images" ON storage.obje
 DROP POLICY IF EXISTS "Providers can delete own provider images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers can update own service images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers can delete own service images" ON storage.objects;
+DROP POLICY IF EXISTS "Users upload own pet images" ON storage.objects;
+DROP POLICY IF EXISTS "Users update own pet images" ON storage.objects;
+DROP POLICY IF EXISTS "Users delete own pet images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers upload own provider images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers update own provider images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers delete own provider images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers upload service images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers update service images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers delete service images" ON storage.objects;
 
--- 3. Create hardened storage policies with strict folder namespacing
+-- 3. Create hardened storage policies
 -- pet-images: Authenticated user must own the top-level folder
 CREATE POLICY "Users upload own pet images"
     ON storage.objects FOR INSERT
@@ -647,12 +820,12 @@ CREATE POLICY "Users delete own pet images"
         )
     );
 
--- provider-images: Must be verified provider AND own the top-level folder
+-- provider-images: Must be VERIFIED provider AND own top-level folder
 CREATE POLICY "Providers upload own provider images"
     ON storage.objects FOR INSERT
     WITH CHECK (
         bucket_id = 'provider-images' AND (
-            (public.is_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
+            (public.is_verified_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
             OR public.is_admin()
         )
     );
@@ -661,7 +834,7 @@ CREATE POLICY "Providers update own provider images"
     ON storage.objects FOR UPDATE
     USING (
         bucket_id = 'provider-images' AND (
-            (public.is_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
+            (public.is_verified_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
             OR public.is_admin()
         )
     );
@@ -670,17 +843,17 @@ CREATE POLICY "Providers delete own provider images"
     ON storage.objects FOR DELETE
     USING (
         bucket_id = 'provider-images' AND (
-            (public.is_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
+            (public.is_verified_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
             OR public.is_admin()
         )
     );
 
--- service-images: Must be verified provider AND own the top-level folder
+-- service-images: Must be VERIFIED provider AND own top-level folder
 CREATE POLICY "Providers upload service images"
     ON storage.objects FOR INSERT
     WITH CHECK (
         bucket_id = 'service-images' AND (
-            (public.is_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
+            (public.is_verified_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
             OR public.is_admin()
         )
     );
@@ -689,7 +862,7 @@ CREATE POLICY "Providers update service images"
     ON storage.objects FOR UPDATE
     USING (
         bucket_id = 'service-images' AND (
-            (public.is_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
+            (public.is_verified_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
             OR public.is_admin()
         )
     );
@@ -698,14 +871,14 @@ CREATE POLICY "Providers delete service images"
     ON storage.objects FOR DELETE
     USING (
         bucket_id = 'service-images' AND (
-            (public.is_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
+            (public.is_verified_provider() AND (storage.foldername(name))[1] = auth.uid()::text)
             OR public.is_admin()
         )
     );
 
 
 -- ============================================================================
--- SECTION 9: INTEGRITY CONSTRAINTS & INDEXES
+-- SECTION 10: INTEGRITY CONSTRAINTS & INDEXES
 -- ============================================================================
 
 -- 1. Availability start_time < end_time check constraint

@@ -1,13 +1,13 @@
 -- ============================================================================
--- PRODUCTION SECURITY POST-MIGRATION VERIFICATION SCRIPT (FINAL)
+-- PRODUCTION SECURITY POST-MIGRATION VERIFICATION SCRIPT (FINAL - REVISED)
 -- Target Environments: Production (uuhxfrobjbysasznothx) & Staging (pcizqsdnddlfxecmgojn)
 -- Mode: 100% READ-ONLY (No mutations or data changes)
 -- Description: Substantively audits every applied security hardening measure:
 --   1. Permissive policy elimination (users, providers, reviews)
---   2. Search path isolation on SECURITY DEFINER functions
---   3. Active status of triggers (role escalation, provider tampering, booking validation)
+--   2. Search path isolation on SECURITY DEFINER functions (including is_verified_provider)
+--   3. Active status of triggers (role escalation, provider tampering, booking validation, review integrity)
 --   4. Public provider profile view structure, privacy protection, and grants
---   5. Storage bucket configuration, MIME whitelist, and user folder namespacing
+--   5. Storage bucket configuration, MIME whitelist, and user/verified-provider folder namespacing
 --   6. Integrity constraints and unique composite/partial indexes
 --   7. Record preservation and data integrity baseline verification
 -- ============================================================================
@@ -15,7 +15,7 @@
 DO $$
 BEGIN
     RAISE NOTICE '=============================================================';
-    RAISE NOTICE 'STARTING POST-MIGRATION SECURITY VERIFICATION (FINAL)';
+    RAISE NOTICE 'STARTING POST-MIGRATION SECURITY VERIFICATION (FINAL - REVISED)';
     RAISE NOTICE 'Timestamp: %', NOW();
     RAISE NOTICE '=============================================================';
 END $$;
@@ -72,11 +72,13 @@ WITH required_functions AS (
     SELECT unnest(ARRAY[
         'is_admin',
         'is_provider',
+        'is_verified_provider',
         'is_owner',
         'handle_new_user',
         'prevent_user_role_escalation',
         'prevent_provider_verification_tampering',
-        'validate_booking_transition_and_fields'
+        'validate_booking_transition_and_fields',
+        'validate_review_integrity'
     ]) AS expected_func
 )
 SELECT 
@@ -101,7 +103,8 @@ WITH required_triggers AS (
     SELECT * FROM (VALUES 
         ('users', 'trg_prevent_user_role_escalation'),
         ('providers', 'trg_prevent_provider_verification_tampering'),
-        ('bookings', 'trg_validate_booking_transition')
+        ('bookings', 'trg_validate_booking_transition'),
+        ('reviews', 'trg_validate_review_integrity')
     ) AS t(expected_table, expected_trigger)
 )
 SELECT 
@@ -201,15 +204,20 @@ WHERE schemaname = 'storage'
     (qual IS NOT NULL AND cmd != 'INSERT' AND qual NOT LIKE '%storage.foldername%')
   );
 
--- Check 5.2: Assert public image retrieval policies remain active
+-- Check 5.2: Assert verified-provider check on provider-images and service-images
 SELECT 
+    'Check 5.2: Verified Provider Storage Enforcement' AS check_item,
     policyname,
     CASE 
-        WHEN qual LIKE '%bucket_id =%' THEN 'PASS: Public CDN retrieval active'
-        ELSE 'FAIL'
+        WHEN (with_check LIKE '%is_verified_provider%' OR qual LIKE '%is_verified_provider%') 
+        THEN 'PASS: Verified provider check active'
+        ELSE 'FAIL: Missing is_verified_provider enforcement'
     END AS verdict
 FROM pg_policies
-WHERE schemaname = 'storage' AND tablename = 'objects' AND cmd = 'SELECT';
+WHERE schemaname = 'storage' 
+  AND tablename = 'objects'
+  AND (policyname LIKE '%provider images%' OR policyname LIKE '%service images%')
+  AND cmd IN ('INSERT', 'UPDATE', 'DELETE');
 
 -- Check 5.3: Storage bucket file-size and MIME limits
 SELECT 
@@ -285,6 +293,6 @@ SELECT
 DO $$
 BEGIN
     RAISE NOTICE '=============================================================';
-    RAISE NOTICE 'POST-MIGRATION SECURITY VERIFICATION (FINAL) COMPLETED.';
+    RAISE NOTICE 'POST-MIGRATION SECURITY VERIFICATION (FINAL - REVISED) COMPLETED.';
     RAISE NOTICE '=============================================================';
 END $$;
