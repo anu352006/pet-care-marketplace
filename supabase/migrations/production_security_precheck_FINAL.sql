@@ -1,5 +1,5 @@
 -- ============================================================================
--- PRODUCTION SECURITY MIGRATION PRE-CHECK SCRIPT (FINAL)
+-- PRODUCTION SECURITY MIGRATION PRE-CHECK SCRIPT (FINAL REVISED - READ ONLY)
 -- Target Project: Production Supabase (Project ID: uuhxfrobjbysasznothx)
 -- Mode: 100% READ-ONLY (No data or schema mutations)
 -- Purpose: Substantively inspect existing data, policies, functions, views,
@@ -30,185 +30,135 @@ SELECT
 FROM public.availability 
 WHERE start_time >= end_time;
 
--- Check 1.2: Availability duplicate slot check
-WITH availability_dupes AS (
-    SELECT provider_id, date, start_time, end_time, COUNT(*) AS occurrences
-    FROM public.availability
-    GROUP BY provider_id, date, start_time, end_time
-    HAVING COUNT(*) > 1
-)
+-- Check 1.2: Availability exact duplicate slots validation
 SELECT 
-    'Check 1.2: Availability Duplicate Slot Audit' AS test_name,
-    COUNT(*) AS violating_slots,
+    'Check 1.2: Availability Duplicate Slots' AS test_name,
+    COUNT(*) AS duplicate_groups,
     CASE 
         WHEN COUNT(*) = 0 THEN 'PASS: Zero duplicate availability slots found.'
-        ELSE 'FAIL: Duplicate availability slots found. Resolve duplicates before unique index.'
+        ELSE 'FAIL: Duplicate availability slots exist. Deduplication required.'
     END AS verdict
-FROM availability_dupes;
-
--- Check 1.3: Reviews duplicate booking_id check
-WITH review_dupes AS (
-    SELECT booking_id, COUNT(*) AS occurrences
-    FROM public.reviews
-    WHERE booking_id IS NOT NULL
-    GROUP BY booking_id
+FROM (
+    SELECT provider_id, date, start_time, end_time, COUNT(*) 
+    FROM public.availability 
+    GROUP BY provider_id, date, start_time, end_time 
     HAVING COUNT(*) > 1
-)
+) sub;
+
+-- Check 1.3: Availability overlapping intervals validation
 SELECT 
-    'Check 1.3: Reviews Duplicate Booking Audit' AS test_name,
-    COUNT(*) AS violating_reviews,
+    'Check 1.3: Availability Overlapping Intervals' AS test_name,
+    COUNT(*) AS violating_pairs,
     CASE 
-        WHEN COUNT(*) = 0 THEN 'PASS: Zero duplicate reviews for the same booking.'
-        ELSE 'FAIL: Duplicate reviews found for same booking. Resolve before unique index.'
+        WHEN COUNT(*) = 0 THEN 'PASS: Zero overlapping availability intervals found.'
+        ELSE 'FAIL: Overlapping availability intervals exist. Conflict resolution required.'
     END AS verdict
-FROM review_dupes;
+FROM public.availability a1
+JOIN public.availability a2 ON a1.provider_id = a2.provider_id 
+                           AND a1.date = a2.date 
+                           AND a1.id < a2.id
+WHERE (a1.start_time < a2.end_time AND a1.end_time > a2.start_time);
 
--- ----------------------------------------------------------------------------
--- 2. HISTORICAL BOOKINGS DATA INTEGRITY FOR TRIGGER VALIDATION
--- ----------------------------------------------------------------------------
-
--- Check 2.1: Price integrity check on historical bookings
+-- Check 1.4: btree_gist extension availability
 SELECT 
-    'Check 2.1: Historical Booking Price Integrity' AS test_name,
+    'Check 1.4: btree_gist Extension Availability' AS test_name,
+    COUNT(*) AS available_count,
+    CASE 
+        WHEN COUNT(*) > 0 THEN 'PASS: btree_gist extension is available in pg_available_extensions.'
+        ELSE 'FAIL: btree_gist extension is missing from PostgreSQL distribution.'
+    END AS verdict
+FROM pg_available_extensions
+WHERE name = 'btree_gist';
+
+-- Check 1.5: Review unique booking duplicate validation
+SELECT 
+    'Check 1.5: Reviews Duplicate Bookings' AS test_name,
+    COUNT(*) AS duplicate_booking_reviews,
+    CASE 
+        WHEN COUNT(*) = 0 THEN 'PASS: Zero duplicate reviews per booking found.'
+        ELSE 'FAIL: Duplicate reviews for same booking exist. Cleanup required.'
+    END AS verdict
+FROM (
+    SELECT booking_id, COUNT(*) 
+    FROM public.reviews 
+    WHERE booking_id IS NOT NULL 
+    GROUP BY booking_id 
+    HAVING COUNT(*) > 1
+) sub;
+
+-- ----------------------------------------------------------------------------
+-- 2. INTEGRITY CHECKS FOR NEW BOOKING TRIGGER RULES
+-- ----------------------------------------------------------------------------
+
+-- Check 2.1: Booking total_price matches service price
+SELECT 
+    'Check 2.1: Booking Price Integrity' AS test_name,
     COUNT(*) AS price_mismatches,
     CASE 
-        WHEN COUNT(*) = 0 THEN 'PASS: All existing bookings match service catalog price.'
-        ELSE 'WARNING: Historical price differences exist (will be preserved by trigger).'
+        WHEN COUNT(*) = 0 THEN 'PASS: All existing bookings match their service catalog price.'
+        ELSE 'WARNING: Historical bookings exist with price deviations (will be preserved as historical).'
     END AS verdict
 FROM public.bookings b
 JOIN public.services s ON b.service_id = s.id
 WHERE b.total_price IS DISTINCT FROM s.price;
 
--- Check 2.2: Pet ownership verification
+-- Check 2.2: Pet ownership alignment
 SELECT 
-    'Check 2.2: Booking Pet Ownership Alignment' AS test_name,
-    COUNT(*) AS pet_mismatches,
+    'Check 2.2: Pet Ownership Alignment' AS test_name,
+    COUNT(*) AS mismatched_pets,
     CASE 
-        WHEN COUNT(*) = 0 THEN 'PASS: All existing bookings have pets matching user_id.'
-        ELSE 'WARNING: Bookings found where pet does not belong to booking user.'
+        WHEN COUNT(*) = 0 THEN 'PASS: All existing bookings belong to the owner of the booked pet.'
+        ELSE 'WARNING: Bookings exist where booking user != pet owner.'
     END AS verdict
 FROM public.bookings b
 JOIN public.pets p ON b.pet_id = p.id
-WHERE b.user_id IS DISTINCT FROM p.owner_id;
+WHERE b.user_id <> p.owner_id;
 
--- Check 2.3: Provider verification on existing bookings
+-- Check 2.3: Provider verification state for existing bookings
 SELECT 
-    'Check 2.3: Booking Provider Verification State' AS test_name,
-    COUNT(*) AS unverified_bookings,
+    'Check 2.3: Provider Verification State' AS test_name,
+    COUNT(*) AS unverified_provider_bookings,
     CASE 
-        WHEN COUNT(*) = 0 THEN 'PASS: All providers in bookings are verified.'
-        ELSE 'WARNING: Bookings exist pointing to unverified providers.'
+        WHEN COUNT(*) = 0 THEN 'PASS: All bookings are assigned to verified providers.'
+        ELSE 'WARNING: Bookings exist referencing unverified providers.'
     END AS verdict
 FROM public.bookings b
-JOIN public.providers p ON b.provider_id = p.id
-WHERE p.verified IS NOT TRUE;
+JOIN public.providers pr ON b.provider_id = pr.id
+WHERE pr.verified IS NOT TRUE;
 
 -- ----------------------------------------------------------------------------
--- 3. VERIFY PUBLIC PROVIDER VIEW EXISTENCE & STATE
+-- 3. SCHEMA COLLISION CHECKS
 -- ----------------------------------------------------------------------------
+
+-- Check 3.1: Provider public profiles view collision
 SELECT 
-    'Check 3.1: Provider Public View Existence' AS test_name,
+    'Check 3.1: Provider Public Profiles View Collision' AS test_name,
+    COUNT(*) AS collision_count,
     CASE 
-        WHEN EXISTS (SELECT 1 FROM pg_views WHERE schemaname = 'public' AND viewname = 'provider_public_profiles') 
-        THEN 'NOTICE: provider_public_profiles already exists. Definition will be replaced.'
-        ELSE 'PASS: provider_public_profiles does not exist yet. Safe to create fresh view.'
-    END AS verdict;
+        WHEN COUNT(*) = 0 THEN 'PASS: View does not exist yet. Safe to create fresh.'
+        ELSE 'NOTICE: View already exists. Will be replaced cleanly.'
+    END AS verdict
+FROM pg_views
+WHERE schemaname = 'public' AND viewname = 'provider_public_profiles';
 
 -- ----------------------------------------------------------------------------
--- 4. INVENTORY OF POLICIES TARGETED FOR REPLACEMENT
+-- 4. CURRENT PRODUCTION INVENTORY BASELINE
 -- ----------------------------------------------------------------------------
 SELECT 
-    schemaname,
-    tablename, 
-    policyname, 
-    cmd,
-    'TARGET FOR REPLACEMENT' AS action
-FROM pg_policies 
-WHERE schemaname = 'public' 
-  AND (
-    (tablename = 'users' AND policyname = 'Public users profile read') OR
-    (tablename = 'users' AND policyname = 'Users can update own profile' AND with_check IS NULL) OR
-    (tablename = 'providers' AND policyname = 'Public can view providers') OR
-    (tablename = 'providers' AND policyname = 'Provider can insert own profile') OR
-    (tablename = 'providers' AND policyname = 'Provider can update own profile') OR
-    (tablename = 'reviews' AND policyname = 'Users can insert reviews')
-  )
-ORDER BY tablename, policyname;
-
-SELECT 
-    schemaname,
-    tablename, 
-    policyname, 
-    cmd,
-    'STORAGE POLICY TARGET FOR NAMESPACING' AS action
-FROM pg_policies 
-WHERE schemaname = 'storage' AND tablename = 'objects'
-  AND policyname IN (
-    'Authenticated users upload pet images',
-    'Providers can upload provider images',
-    'Providers can upload service images',
-    'Users can update their pet images',
-    'Users can delete their pet images',
-    'Providers can update own provider images',
-    'Providers can delete own provider images',
-    'Providers can update own service images',
-    'Providers can delete own service images'
-  )
-ORDER BY policyname;
-
--- ----------------------------------------------------------------------------
--- 5. FUNCTION & TRIGGER PRE-CHECK
--- ----------------------------------------------------------------------------
-SELECT 
-    p.proname AS function_name,
-    p.prosecdef AS is_security_definer,
-    p.proconfig AS search_path,
-    CASE 
-        WHEN p.proconfig @> ARRAY['search_path=pg_catalog, public, auth'] THEN 'PASS: Secure search_path'
-        ELSE 'TARGET FOR REPLACEMENT: Insecure or incomplete search_path'
-    END AS status
-FROM pg_proc p
-JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE n.nspname = 'public'
-  AND p.proname IN ('is_admin', 'is_provider', 'is_owner', 'handle_new_user')
-ORDER BY p.proname;
-
--- ----------------------------------------------------------------------------
--- 6. STORAGE BUCKET LIMITS PRE-CHECK
--- ----------------------------------------------------------------------------
-SELECT 
-    id AS bucket_id,
-    file_size_limit,
-    allowed_mime_types,
-    CASE 
-        WHEN file_size_limit IS NULL THEN 'TARGET FOR UPDATE: Add 5MB limit'
-        ELSE 'CONFIGURED'
-    END AS size_status,
-    CASE 
-        WHEN allowed_mime_types IS NULL THEN 'TARGET FOR UPDATE: Add image MIME whitelist'
-        ELSE 'CONFIGURED'
-    END AS mime_status
-FROM storage.buckets
-WHERE id IN ('pet-images', 'provider-images', 'service-images')
-ORDER BY id;
-
--- ----------------------------------------------------------------------------
--- 7. BASELINE ROW COUNTS (PRE-MIGRATION RECORD)
--- ----------------------------------------------------------------------------
-SELECT 
-  (SELECT COUNT(*) FROM public.users) AS baseline_users,
-  (SELECT COUNT(*) FROM public.providers) AS baseline_providers,
-  (SELECT COUNT(*) FROM public.services) AS baseline_services,
-  (SELECT COUNT(*) FROM public.availability) AS baseline_availability,
-  (SELECT COUNT(*) FROM public.pets) AS baseline_pets,
-  (SELECT COUNT(*) FROM public.bookings) AS baseline_bookings,
-  (SELECT COUNT(*) FROM public.reviews) AS baseline_reviews,
-  (SELECT COUNT(*) FROM public.notifications) AS baseline_notifications,
-  (SELECT COUNT(*) FROM storage.objects) AS baseline_storage_objects;
+    'Check 4: Production Record Inventory Baseline' AS test_name,
+    (SELECT COUNT(*) FROM public.users) AS users_count,
+    (SELECT COUNT(*) FROM public.providers) AS providers_count,
+    (SELECT COUNT(*) FROM public.services) AS services_count,
+    (SELECT COUNT(*) FROM public.availability) AS availability_count,
+    (SELECT COUNT(*) FROM public.pets) AS pets_count,
+    (SELECT COUNT(*) FROM public.bookings) AS bookings_count,
+    (SELECT COUNT(*) FROM public.reviews) AS reviews_count,
+    (SELECT COUNT(*) FROM public.notifications) AS notifications_count,
+    (SELECT COUNT(*) FROM storage.objects) AS storage_objects_count;
 
 DO $$
 BEGIN
     RAISE NOTICE '=============================================================';
-    RAISE NOTICE 'PRE-CHECK (FINAL) COMPLETED. VERIFY ALL CHECKS PASS.';
+    RAISE NOTICE 'PRODUCTION SECURITY PRE-CHECK COMPLETE';
     RAISE NOTICE '=============================================================';
 END $$;

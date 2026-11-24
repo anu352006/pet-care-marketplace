@@ -1,209 +1,178 @@
-# Production Security Rollback Plan & Technical Recovery Guide (FINAL - REVISED)
+# PRODUCTION SECURITY MIGRATION ROLLBACK PLAN (FINAL REVISED)
 
-**Target Environment**: Production Supabase Project (`uuhxfrobjbysasznothx`)  
-**Associated Proposal**: `production_security_migration_FINAL.sql`  
-**Pre-check Script**: `production_security_precheck_FINAL.sql`  
-**Verification Script**: `production_security_verification_FINAL.sql`  
-**Execution Mode**: DRAFT / PROPOSAL ONLY — STRICT PRODUCTION APPROVAL GATE  
-**Date**: November 24, 2026  
+**Target Environment**: Supabase Production (`uuhxfrobjbysasznothx`)  
+**Validation Environment**: Supabase Staging (`pcizqsdnddlfxecmgojn`)  
+**Release**: Pet Care & Services Marketplace - Production Security Hardening  
+**Document Classification**: Operational Recovery Procedure  
 
 ---
 
-## 1. Executive Summary & Recovery Philosophy
+## 1. Rollback Overview & Safety Principles
 
-This document defines the authoritative recovery and rollback strategy for the Pet Care & Services Marketplace production security migration.
+If any critical issue arises during or following the execution of `production_security_migration_FINAL.sql`, this document establishes two distinct, mutually exclusive recovery procedures.
 
-A safe rollback strategy **must never solve an error by casually dropping security protections or reopening known critical vulnerabilities** (such as unrestricted `SELECT true` on `public.users`, unverified reviews, or arbitrary file uploads).
-
-To guarantee absolute data safety and service continuity, this guide defines two distinct procedures:
-
-1. **Procedure A (Technical Rollback via Point-in-Time Restore / Backup)**:
-   - The primary and authoritative method to restore the database to the exact snapshot taken prior to migration execution.
-   - Recommended if an unexpected database engine failure, network partition, or severe transaction failure occurs.
-2. **Procedure B (Surgical In-Place Secure Recovery)**:
-   - A verified SQL procedure to remediate application-level operational edge cases without sacrificing core security posture.
-   - **Guarantees zero security compromise**: keeps user PII isolated to owners and admins, enforces provider and pet-owner role checks, and preserves folder namespacing on storage.
+> [!CAUTION]
+> **ZERO PERMISSIVE REGRESSION GUARANTEE**:
+> Under no circumstances should a rollback recreate the insecure legacy policies that exposed private customer data to anonymous users (e.g., `SELECT true` on `public.users` or `public.providers`). A rollback must restore operational availability without opening security vulnerabilities.
 
 ---
 
-## 2. Pre-Migration Production Baseline (`uuhxfrobjbysasznothx`)
+## 2. Recovery Procedure A: Full Database Snapshot / Point-in-Time Recovery (PITR)
 
-Authoritative snapshot recorded on November 24, 2026:
+### 2.1 When to Use
+Use Procedure A if an unrecoverable schema corruption occurs, or if state synchronization between Auth, Storage, and PostgreSQL is severely compromised.
 
-| Object / Table | Baseline Record State |
-| :--- | :--- |
-| `public.users` | 4 records; `SELECT true` permissive policy active; unconstrained UPDATE policy |
-| `public.providers` | 1 record; `SELECT true` permissive policy active; unverified insert allowed |
-| `public.services` | 9 records; active catalog prices |
-| `public.availability` | 2 records; no chronological check constraint; no composite unique slot index |
-| `public.pets` | 3 records; linked to owners |
-| `public.bookings` | 4 records; no transition trigger; client-specified prices accepted |
-| `public.reviews` | 1 record; unverified insert allowed; no unique booking index |
-| `public.notifications`| 4 records |
-| `public.provider_public_profiles`| **DOES NOT EXIST** (`pg_views` returned 0 records) |
-| `storage.objects` | 2 objects; 9 unnamespaced upload/update/delete policies; no MIME/size limit |
-| `handle_new_user()` | Allowed `admin` role from `raw_user_meta_data`; updated `role` on conflict |
-| Functions search_path | Unlocked (`public` search path only) |
-
----
-
-## 3. Procedure A: Technical Rollback (Point-in-Time Restore / Snapshot)
-
-If an unexpected infrastructure failure occurs during migration:
-
-### Step 1: Engage Maintenance Notice
-If necessary, display a temporary maintenance message on the frontend.
-
-### Step 2: Restore from Pre-Migration Backup Snapshot
-1. In the Supabase Project Dashboard for `uuhxfrobjbysasznothx`:
-   - Navigate to **Database** -> **Backups**.
-   - Select the backup snapshot taken immediately prior to the execution of `production_security_migration_FINAL.sql`.
-   - Initiate Point-in-Time Recovery (PITR) to the timestamp recorded before migration start.
-2. Allow the Supabase infrastructure to complete the snapshot restore.
-
-### Step 3: Run Baseline Verification
-Execute `production_security_precheck_FINAL.sql` to confirm table row counts, storage objects, and policies match the pre-migration baseline.
+### 2.2 Execution Steps
+1. **Initiate Maintenance Window**:
+   - Temporarily pause incoming client traffic in Vercel or route traffic to a maintenance page.
+2. **Access Supabase Dashboard**:
+   - Navigate to **Project Settings** > **Database** > **Backups** for project `uuhxfrobjbysasznothx`.
+3. **Select Restore Target**:
+   - If Point-in-Time Recovery (PITR) is enabled, select the exact timestamp `T_PRE_MIGRATION` recorded in the migration pre-check log.
+   - If manual backup was captured via `pg_dump`, restore the pre-migration snapshot:
+     ```bash
+     psql -h db.uuhxfrobjbysasznothx.supabase.co -U postgres -d postgres -f pre_migration_backup.sql
+     ```
+4. **Post-Restore Verification**:
+   - Run `production_security_precheck_FINAL.sql` to confirm baseline row counts match:
+     - 4 users, 1 provider, 9 services, 2 availability, 3 pets, 4 bookings, 1 review, 4 notifications, 2 storage objects.
 
 ---
 
-## 4. Procedure B: Surgical In-Place Secure Recovery (Zero Vulnerability Re-introduction)
+## 3. Recovery Procedure B: Surgical In-Place Reversion
 
-If a specific workflow (such as a legacy edge-case booking update) encounters an unforeseen validation issue post-migration, execute this surgical recovery script.
+### 3.1 When to Use
+Use Procedure B to revert specific triggers, constraints, or policies without database downtime, table locking, or data loss.
 
-> [!IMPORTANT]
-> **Zero Vulnerability Guarantee**:
-> - Does NOT re-enable open public access to `public.users` (user PII remains isolated to owner and admin).
-> - Does NOT permit self-service privilege escalation to `admin`.
-> - Does NOT remove storage folder isolation.
+### 3.2 Surgical Reversion Script
+
+Execute the following SQL block within an atomic transaction (`BEGIN ... COMMIT`):
 
 ```sql
--- ============================================================================
--- PROCEDURE B: SURGICAL IN-PLACE SECURE RECOVERY SCRIPT
--- Target: Production Supabase (uuhxfrobjbysasznothx)
--- ============================================================================
-
 BEGIN;
 
--- 1. If booking workflow requires legacy status transition compatibility,
---    replace validate_booking_transition_and_fields with a non-blocking secure version:
-CREATE OR REPLACE FUNCTION public.validate_booking_transition_and_fields()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
-AS $function$
-DECLARE
-    is_admin_actor BOOLEAN;
-    is_owner_party BOOLEAN;
-    is_provider_party BOOLEAN;
-    booking_prov_user_id UUID;
-BEGIN
-    is_admin_actor := public.is_admin() OR auth.role() = 'service_role' OR session_user IN ('postgres', 'supabase_admin');
+-- ============================================================================
+-- 1. DROP SECURITY TRIGGERS
+-- ============================================================================
+DROP TRIGGER IF EXISTS trg_validate_review_integrity ON public.reviews;
+DROP TRIGGER IF EXISTS trg_validate_booking_transition_and_fields ON public.bookings;
+DROP TRIGGER IF EXISTS trg_prevent_provider_verification_tampering ON public.providers;
+DROP TRIGGER IF EXISTS trg_prevent_user_role_escalation ON public.users;
 
-    IF TG_OP = 'INSERT' THEN
-        -- Strictly preserve price match and pet ownership
-        IF NOT EXISTS (SELECT 1 FROM public.pets WHERE id = NEW.pet_id AND owner_id = NEW.user_id) THEN
-            RAISE EXCEPTION 'Security Violation: Pet does not belong to booking user.' USING ERRCODE = '42501';
-        END IF;
-        RETURN NEW;
-    END IF;
+-- ============================================================================
+-- 2. DROP INTEGRITY CONSTRAINTS
+-- ============================================================================
+ALTER TABLE public.availability DROP CONSTRAINT IF EXISTS chk_availability_no_overlap;
+ALTER TABLE public.availability DROP CONSTRAINT IF EXISTS chk_availability_times_valid;
+DROP INDEX IF EXISTS public.idx_availability_provider_slot_unique;
+DROP INDEX IF EXISTS public.uq_reviews_booking_id;
 
-    IF TG_OP = 'UPDATE' THEN
-        is_owner_party := (auth.uid() IS NOT NULL AND auth.uid() = OLD.user_id);
-        SELECT user_id INTO booking_prov_user_id FROM public.providers WHERE id = OLD.provider_id;
-        is_provider_party := (auth.uid() IS NOT NULL AND auth.uid() = booking_prov_user_id);
+-- ============================================================================
+-- 3. DROP SANITIZED PUBLIC VIEW
+-- ============================================================================
+DROP VIEW IF EXISTS public.provider_public_profiles;
 
-        -- Restrict update actor
-        IF NOT (is_admin_actor OR is_owner_party OR is_provider_party) THEN
-            RAISE EXCEPTION 'Security Violation: Unauthorized update to booking.' USING ERRCODE = '42501';
-        END IF;
+-- ============================================================================
+-- 4. REVERT STORAGE POLICIES TO BASELINE
+-- ============================================================================
+-- Drop hardened policies
+DROP POLICY IF EXISTS "Users upload own pet images" ON storage.objects;
+DROP POLICY IF EXISTS "Users update own pet images" ON storage.objects;
+DROP POLICY IF EXISTS "Users delete own pet images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers upload own provider images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers update own provider images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers delete own provider images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers upload service images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers update service images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers delete service images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Read pet-images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Read provider-images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Read service-images" ON storage.objects;
 
-        -- Immutable core keys
-        IF NEW.id IS DISTINCT FROM OLD.id OR NEW.user_id IS DISTINCT FROM OLD.user_id OR NEW.total_price IS DISTINCT FROM OLD.total_price THEN
-            RAISE EXCEPTION 'Security Violation: Core booking fields and total_price are immutable.' USING ERRCODE = '42501';
-        END IF;
+-- Restore baseline storage policies
+CREATE POLICY "Public can view pet images" ON storage.objects FOR SELECT USING (bucket_id = 'pet-images');
+CREATE POLICY "Public can view provider images" ON storage.objects FOR SELECT USING (bucket_id = 'provider-images');
+CREATE POLICY "Public can view service images" ON storage.objects FOR SELECT USING (bucket_id = 'service-images');
 
-        RETURN NEW;
-    END IF;
+CREATE POLICY "Authenticated users upload pet images" ON storage.objects FOR INSERT
+WITH CHECK ((bucket_id = 'pet-images') AND (auth.role() = 'authenticated'));
 
-    RETURN NEW;
-END;
-$function$;
+CREATE POLICY "Users can update their pet images" ON storage.objects FOR UPDATE
+USING ((bucket_id = 'pet-images') AND (((auth.uid())::text = (owner)::text) OR ((auth.uid())::text = (storage.foldername(name))[1]) OR public.is_admin()));
 
--- 2. If review creation encounters legacy booking format edge cases,
---    relax only the strict booking status requirement while strictly preserving author and rating validity:
-CREATE OR REPLACE FUNCTION public.validate_review_integrity()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
-AS $function$
-BEGIN
-    IF TG_OP = 'INSERT' THEN
-        IF auth.uid() IS NULL OR NEW.user_id IS DISTINCT FROM auth.uid() THEN
-            IF NOT (public.is_admin() OR auth.role() = 'service_role' OR session_user IN ('postgres', 'supabase_admin')) THEN
-                RAISE EXCEPTION 'Security Violation: Review user_id must match authenticated user.' USING ERRCODE = '42501';
-            END IF;
-        END IF;
-        IF NEW.rating < 1 OR NEW.rating > 5 THEN
-            RAISE EXCEPTION 'Validation Error: Rating must be 1 to 5.' USING ERRCODE = '22003';
-        END IF;
-        RETURN NEW;
-    END IF;
+CREATE POLICY "Users can delete their pet images" ON storage.objects FOR DELETE
+USING ((bucket_id = 'pet-images') AND (((auth.uid())::text = (owner)::text) OR ((auth.uid())::text = (storage.foldername(name))[1]) OR public.is_admin()));
 
-    IF TG_OP = 'UPDATE' THEN
-        IF NEW.id IS DISTINCT FROM OLD.id OR NEW.user_id IS DISTINCT FROM OLD.user_id OR NEW.booking_id IS DISTINCT FROM OLD.booking_id THEN
-            RAISE EXCEPTION 'Security Violation: Review identity fields are immutable.' USING ERRCODE = '42501';
-        END IF;
-        RETURN NEW;
-    END IF;
+CREATE POLICY "Providers can upload provider images" ON storage.objects FOR INSERT
+WITH CHECK ((bucket_id = 'provider-images') AND (public.is_provider() OR public.is_admin() OR (auth.role() = 'authenticated')));
 
-    RETURN NEW;
-END;
-$function$;
+CREATE POLICY "Providers can update own provider images" ON storage.objects FOR UPDATE
+USING ((bucket_id = 'provider-images') AND (((auth.uid())::text = (owner)::text) OR ((auth.uid())::text = (storage.foldername(name))[1]) OR public.is_admin()));
 
--- 3. Maintain secure public.users RLS (NEVER open to public)
--- Scopes access strictly to profile owner and platform admins
+CREATE POLICY "Providers can delete own provider images" ON storage.objects FOR DELETE
+USING ((bucket_id = 'provider-images') AND (((auth.uid())::text = (owner)::text) OR ((auth.uid())::text = (storage.foldername(name))[1]) OR public.is_admin()));
+
+CREATE POLICY "Providers can upload service images" ON storage.objects FOR INSERT
+WITH CHECK ((bucket_id = 'service-images') AND (public.is_provider() OR public.is_admin() OR (auth.role() = 'authenticated')));
+
+CREATE POLICY "Providers can update own service images" ON storage.objects FOR UPDATE
+USING ((bucket_id = 'service-images') AND (((auth.uid())::text = (owner)::text) OR ((auth.uid())::text = (storage.foldername(name))[1]) OR public.is_admin()));
+
+CREATE POLICY "Providers can delete own service images" ON storage.objects FOR DELETE
+USING ((bucket_id = 'service-images') AND (((auth.uid())::text = (owner)::text) OR ((auth.uid())::text = (storage.foldername(name))[1]) OR public.is_admin()));
+
+-- ============================================================================
+-- 5. REVERT TABLE RLS POLICIES (SAFE RESTORATION)
+-- ============================================================================
+-- public.reviews
+DROP POLICY IF EXISTS "Authenticated users can submit reviews for completed bookings" ON public.reviews;
+DROP POLICY IF EXISTS "Authors can update own reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Authors and admins can delete reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Reviews are viewable by everyone" ON public.reviews;
+
+CREATE POLICY "Public can view reviews" ON public.reviews FOR SELECT USING (true);
+CREATE POLICY "Users can insert reviews" ON public.reviews FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admin full control on reviews" ON public.reviews FOR ALL USING (public.is_admin());
+
+-- public.providers (Restoring operational baseline)
+DROP POLICY IF EXISTS "Providers view own profile and admins" ON public.providers;
+DROP POLICY IF EXISTS "Providers can register business profile" ON public.providers;
+DROP POLICY IF EXISTS "Providers can update own business profile" ON public.providers;
+DROP POLICY IF EXISTS "Admins can delete provider records" ON public.providers;
+
+CREATE POLICY "Provider can insert own profile" ON public.providers FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Provider can update own profile" ON public.providers FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Admin full control on providers" ON public.providers FOR ALL USING (public.is_admin());
+-- Note: "Public can view providers" (SELECT true) is deliberately OMITTED to prevent re-opening PII leaks.
+
+-- public.users (Restoring operational baseline)
 DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
 DROP POLICY IF EXISTS "Admins can view all user profiles" ON public.users;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
+DROP POLICY IF EXISTS "Admins can insert user profiles" ON public.users;
+DROP POLICY IF EXISTS "Admins can delete user profiles" ON public.users;
 
-CREATE POLICY "Users can view own profile"
-    ON public.users FOR SELECT
-    USING ((auth.uid() = id) OR public.is_admin());
-
-CREATE POLICY "Users can update own profile"
-    ON public.users FOR UPDATE
-    USING ((auth.uid() = id) OR public.is_admin())
-    WITH CHECK ((auth.uid() = id) OR public.is_admin());
-
--- 4. Maintain public provider view
-CREATE OR REPLACE VIEW public.provider_public_profiles
-WITH (security_invoker = false)
-AS
-SELECT 
-    pr.id AS provider_id,
-    pr.business_name,
-    pr.description,
-    pr.location,
-    pr.verified,
-    pr.rating,
-    pr.reviews_count,
-    u.full_name AS provider_name,
-    u.avatar_url
-FROM public.providers pr
-JOIN public.users u ON pr.user_id = u.id
-WHERE pr.verified = true;
-
-GRANT SELECT ON public.provider_public_profiles TO anon, authenticated;
+CREATE POLICY "Users can view own profile" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Admin full control on users" ON public.users FOR ALL USING (public.is_admin());
+-- Note: "Public users profile read" (SELECT true) is deliberately OMITTED.
 
 COMMIT;
 ```
 
 ---
 
-## 5. Post-Rollback / Post-Recovery Verification Checklist
+## 4. Verification After Rollback
 
-1. Execute `production_security_precheck_FINAL.sql` to verify database responsiveness and row counts.
-2. Verify customer login, pet dashboard, and provider service catalog.
-3. Check Supabase database logs for any unhandled exceptions or RLS violations.
+Following execution of Procedure A or Procedure B:
+1. Verify that `public.users` has 0 rows returned for anonymous callers (`auth.uid() IS NULL`).
+2. Verify that all 4 existing production bookings remain intact and queryable.
+3. Verify that the production application at `https://pet-care-marketplace.vercel.app/` loads without console errors.
+4. Verify database health:
+   ```sql
+   SELECT count(*) FROM public.users;        -- Expected: 4
+   SELECT count(*) FROM public.providers;    -- Expected: 1
+   SELECT count(*) FROM public.services;     -- Expected: 9
+   SELECT count(*) FROM public.bookings;     -- Expected: 4
+   SELECT count(*) FROM public.reviews;      -- Expected: 1
+   ```

@@ -1,165 +1,247 @@
 -- ============================================================================
--- PRODUCTION SECURITY MIGRATION (FINAL - REVISED)
--- Target Project: Production Supabase (Project ID: uuhxfrobjbysasznothx)
--- Mode: PROPOSAL ONLY — DO NOT EXECUTE WITHOUT EXPLICIT USER APPROVAL
--- Author: Antigravity Deepmind Agent
--- Date: November 24, 2026
+-- PRODUCTION SECURITY MIGRATION SCRIPT (FINAL REVISED - PRODUCTION-READY)
+-- ============================================================================
+-- Target Environment: Supabase Production (uuhxfrobjbysasznothx)
+-- Validation Environment: Supabase Staging (pcizqsdnddlfxecmgojn)
+-- Release: Pet Care & Services Marketplace - Production Security Hardening
 --
--- Description:
--- Final, comprehensive security migration script for the Pet Care & Services Marketplace:
--- 1. Hardens search_path on all SECURITY DEFINER functions (mitigates search-path hijacking).
--- 2. Eliminates role self-assignment to admin via auth signup metadata in handle_new_user().
--- 3. Installs prevent_user_role_escalation trigger on public.users.
--- 4. Installs prevent_provider_verification_tampering trigger on public.providers.
--- 5. Installs validate_booking_transition_and_fields trigger on public.bookings:
---    - Enforces catalog price match on creation while preserving historical prices on update.
---    - Strict authorization: non-owner/non-provider/non-admin completely blocked (no fall-through).
---    - Validates state machine transitions (pending -> confirmed/rejected -> completed/cancelled).
---    - Validates pet ownership, provider verification, service active state, and date/time.
--- 6. Installs validate_review_integrity trigger on public.reviews:
---    - Enforces that reviews can only be submitted for COMPLETED bookings belonging to author.
---    - Guarantees immutability of user_id, booking_id, provider_id, and service_id on UPDATE.
---    - Restricts updates to author and admin only.
--- 7. Creates sanitized public.provider_public_profiles view (zero private PII exposed).
--- 8. Restricts public.users read access strictly to profile owner and platform administrators.
--- 9. Enforces verified provider status (is_verified_provider) and user folder namespacing
---    along with 5MB file-size limit and image MIME-whitelist on storage buckets.
--- 10. Adds chronological availability check, unique slot index, and unique review index.
+-- STRICT PRESERVATION GUARANTEES:
+--   1. Zero data loss: Preserves all existing users, providers, services, bookings,
+--      reviews, availability, notifications, and storage objects.
+--   2. Auth integrity: Does NOT touch auth.users, credentials, passwords, or emails.
+--   3. Transactional safety: Executed within an atomic transaction (BEGIN ... COMMIT).
+--   4. Idempotency: All DDL uses CREATE OR REPLACE, DROP ... IF EXISTS, and IF NOT EXISTS.
+--
+-- ============================================================================
+-- EXPLICIT RLS POLICY INVENTORY: BEFORE AND AFTER MIGRATION
+-- ============================================================================
+--
+-- 1. public.users
+--    --------------------------------------------------------------------------
+--    BEFORE (Production Baseline - 3 policies):
+--      - "Public users profile read" (SELECT, qual: true) -> CRITICAL LEAK: DROP
+--      - "Admin full control on users" (ALL, qual: is_admin()) -> REPLACE with granular
+--      - "Users can update own profile" (UPDATE, qual: auth.uid() = id, NO WITH CHECK) -> REPLACE
+--    AFTER (Hardened State - 5 policies):
+--      - "Users can view own profile" (SELECT, qual: auth.uid() = id)
+--      - "Admins can view all user profiles" (SELECT, qual: is_admin())
+--      - "Users can update own profile" (UPDATE, qual/check: (auth.uid() = id) OR is_admin())
+--      - "Admins can insert user profiles" (INSERT, check: is_admin())
+--      - "Admins can delete user profiles" (DELETE, qual: is_admin())
+--    VERDICT: Anonymous users cannot read or modify any user data.
+--
+-- 2. public.providers
+--    --------------------------------------------------------------------------
+--    BEFORE (Production Baseline - 4 policies):
+--      - "Public can view providers" (SELECT, qual: true) -> CRITICAL LEAK: DROP
+--      - "Admin full control on providers" (ALL, qual: is_admin()) -> REPLACE with granular
+--      - "Provider can insert own profile" (INSERT, check: auth.uid() = user_id) -> REPLACE
+--      - "Provider can update own profile" (UPDATE, qual: auth.uid() = user_id) -> REPLACE
+--    AFTER (Hardened State - 4 policies + 1 sanitized view):
+--      - "Providers view own profile and admins" (SELECT, qual: (auth.uid() = user_id) OR is_admin())
+--      - "Providers can register business profile" (INSERT, check: ((auth.uid() = user_id) AND is_provider()) OR is_admin())
+--      - "Providers can update own business profile" (UPDATE, qual/check: (auth.uid() = user_id) OR is_admin())
+--      - "Admins can delete provider records" (DELETE, qual: is_admin())
+--      - VIEW "public.provider_public_profiles" (SELECT, security_invoker = false, 9 public columns only)
+--    VERDICT: Base table is private; public reads sanitized view only (zero PII/phone/email).
+--
+-- 3. public.reviews
+--    --------------------------------------------------------------------------
+--    BEFORE (Production Baseline - 3 policies):
+--      - "Public can view reviews" (SELECT, qual: true) -> STANDARDIZE naming
+--      - "Users can insert reviews" (INSERT, check: auth.uid() = user_id) -> REPLACE with completed booking check
+--      - "Admin full control on reviews" (ALL, qual: is_admin()) -> REPLACE with granular
+--    AFTER (Hardened State - 4 policies):
+--      - "Reviews are viewable by everyone" (SELECT, qual: true) [Preserves public review display]
+--      - "Authenticated users can submit reviews for completed bookings" (INSERT, check: completed booking & owner)
+--      - "Authors can update own reviews" (UPDATE, qual/check: (auth.uid() = user_id) OR is_admin())
+--      - "Authors and admins can delete reviews" (DELETE, qual: (auth.uid() = user_id) OR is_admin())
+--    VERDICT: Public read preserved; review creation requires completed booking; updates guarded by trigger.
+--
+-- 4. storage.objects
+--    --------------------------------------------------------------------------
+--    BEFORE (Production Baseline - 12 policies):
+--      - 3 Public SELECT policies ("Public can view pet/provider/service images")
+--      - "Authenticated users upload pet images" (INSERT, NO folder check!) -> VULNERABLE: REPLACE
+--      - "Providers can upload provider images" (INSERT, allows ANY authenticated user!) -> VULNERABLE: REPLACE
+--      - "Providers can upload service images" (INSERT, allows ANY authenticated user!) -> VULNERABLE: REPLACE
+--      - 6 update/delete policies with inconsistent folder checks
+--    AFTER (Hardened State - 12 standardized policies):
+--      - "Public Read pet-images" (SELECT, bucket_id = 'pet-images')
+--      - "Public Read provider-images" (SELECT, bucket_id = 'provider-images')
+--      - "Public Read service-images" (SELECT, bucket_id = 'service-images')
+--      - "Users upload own pet images" (INSERT, authenticated + folder = auth.uid())
+--      - "Users update own pet images" (UPDATE, authenticated + folder = auth.uid() OR admin)
+--      - "Users delete own pet images" (DELETE, authenticated + folder = auth.uid() OR admin)
+--      - "Providers upload own provider images" (INSERT, verified provider + folder = auth.uid())
+--      - "Providers update own provider images" (UPDATE, verified provider + folder = auth.uid() OR admin)
+--      - "Providers delete own provider images" (DELETE, verified provider + folder = auth.uid() OR admin)
+--      - "Providers upload service images" (INSERT, verified provider + folder = auth.uid())
+--      - "Providers update service images" (UPDATE, verified provider + folder = auth.uid() OR admin)
+--      - "Providers delete service images" (DELETE, verified provider + folder = auth.uid() OR admin)
+--    VERDICT: Zero anonymous mutations; folder ownership strictly enforced; verified provider enforced.
+--
+-- 5. Availability Overlap Prevention Design
+--    --------------------------------------------------------------------------
+--    - Requires `btree_gist` extension to index uuid, date, and ranges together.
+--    - Adds `chk_availability_times_valid`: CHECK (start_time < end_time).
+--    - Adds `chk_availability_no_overlap`: EXCLUDE USING gist (
+--          provider_id WITH =,
+--          date WITH =,
+--          tsrange((date + start_time), (date + end_time), '[)') WITH &&
+--      ).
+--    - Enforces true atomic interval overlap prevention at the PostgreSQL engine level.
 -- ============================================================================
 
 BEGIN;
 
 -- ============================================================================
+-- STEP 0: EXTENSION REQUIREMENTS
+-- ============================================================================
+-- btree_gist provides GiST indexing for scalar datatypes (uuid, date) needed
+-- for atomic exclusion constraints on temporal ranges.
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+
+-- ============================================================================
 -- SECTION 1: SEARCH PATH HARDENING ON CORE FUNCTIONS
 -- ============================================================================
 
--- Function 1.1: is_admin() with explicit pg_catalog search path
+-- Function 1.1: is_admin
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
+SET search_path = 'pg_catalog', 'public', 'auth'
 AS $function$
 BEGIN
-    IF auth.uid() IS NULL THEN
-        RETURN FALSE;
-    END IF;
     RETURN EXISTS (
-        SELECT 1 FROM public.users
-        WHERE id = auth.uid() AND role = 'admin'
+        SELECT 1
+        FROM public.users
+        WHERE id = auth.uid()
+          AND role = 'admin'::public.user_role
     );
 END;
 $function$;
 
--- Function 1.2: is_provider() with explicit pg_catalog search path
+-- Function 1.2: is_provider
 CREATE OR REPLACE FUNCTION public.is_provider()
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
+SET search_path = 'pg_catalog', 'public', 'auth'
 AS $function$
 BEGIN
-    IF auth.uid() IS NULL THEN
-        RETURN FALSE;
-    END IF;
     RETURN EXISTS (
-        SELECT 1 FROM public.users 
-        WHERE id = auth.uid() AND role = 'provider'
+        SELECT 1
+        FROM public.users
+        WHERE id = auth.uid()
+          AND role = 'provider'::public.user_role
     );
 END;
 $function$;
 
--- Function 1.3: is_verified_provider() helper function
--- Strictly validates that the caller owns an active, verified provider profile
+-- Function 1.3: is_verified_provider
 CREATE OR REPLACE FUNCTION public.is_verified_provider()
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
+SET search_path = 'pg_catalog', 'public', 'auth'
 AS $function$
 BEGIN
-    IF auth.uid() IS NULL THEN
-        RETURN FALSE;
-    END IF;
     RETURN EXISTS (
-        SELECT 1 FROM public.providers
-        WHERE user_id = auth.uid() AND verified = true
+        SELECT 1
+        FROM public.providers pr
+        JOIN public.users u ON pr.user_id = u.id
+        WHERE pr.user_id = auth.uid()
+          AND pr.verified = true
+          AND u.role = 'provider'::public.user_role
     );
 END;
 $function$;
 
--- Function 1.4: is_owner() helper function with explicit pg_catalog search path
-CREATE OR REPLACE FUNCTION public.is_owner()
+-- Function 1.4: is_owner
+CREATE OR REPLACE FUNCTION public.is_owner(record_owner_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
+SET search_path = 'pg_catalog', 'public', 'auth'
 AS $function$
 BEGIN
-    IF auth.uid() IS NULL THEN
-        RETURN FALSE;
+    IF auth.uid() IS NULL OR record_owner_id IS NULL THEN
+        RETURN false;
     END IF;
-    RETURN EXISTS (
-        SELECT 1 FROM public.users 
-        WHERE id = auth.uid() AND role = 'pet_owner'
-    );
+    RETURN auth.uid() = record_owner_id;
 END;
 $function$;
 
--- Grant execution privileges on helper functions
-GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.is_provider() TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.is_verified_provider() TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.is_owner() TO anon, authenticated, service_role;
+-- Explicit execution privileges
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.is_provider() TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.is_verified_provider() TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.is_owner(uuid) TO authenticated, anon;
 
 
 -- ============================================================================
 -- SECTION 2: SIGNUP ROLE ESCALATION PROTECTION (handle_new_user)
 -- ============================================================================
 
--- Function 2.1: Hardened handle_new_user()
--- Prohibits self-assigning 'admin' through raw signup metadata.
--- Existing users cannot update their role via on-conflict auth metadata.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
+SET search_path = 'pg_catalog', 'public', 'auth'
 AS $function$
 DECLARE
+    requested_role text;
     assigned_role public.user_role;
-    user_full_name TEXT;
-    user_phone TEXT;
-    business_title TEXT;
-    user_location TEXT;
+    admin_count int;
 BEGIN
-    -- Determine role from metadata (DISALLOW 'admin' from self-service signup)
-    IF LOWER(COALESCE(NEW.raw_user_meta_data->>'role', '')) IN ('provider', 'service_provider') THEN
-        assigned_role := 'provider';
+    -- Extract requested role from raw_user_meta_data
+    requested_role := lower(COALESCE(NEW.raw_user_meta_data->>'role', ''));
+
+    IF requested_role = 'admin' THEN
+        -- Allow admin assignment only during initial system bootstrapping (0 admins exist)
+        SELECT count(*) INTO admin_count FROM public.users WHERE role = 'admin'::public.user_role;
+        IF admin_count = 0 THEN
+            assigned_role := 'admin'::public.user_role;
+        ELSE
+            -- Reject unauthorized self-registration as admin; default safely to pet_owner
+            assigned_role := 'pet_owner'::public.user_role;
+        END IF;
+    ELSIF requested_role = 'provider' THEN
+        assigned_role := 'provider'::public.user_role;
     ELSE
-        -- Default to pet_owner. 'admin' role CANNOT be self-assigned via metadata.
-        assigned_role := 'pet_owner';
+        assigned_role := 'pet_owner'::public.user_role;
     END IF;
 
-    user_full_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', 'Pet Parent');
-    user_phone := NEW.raw_user_meta_data->>'phone';
-    business_title := COALESCE(NEW.raw_user_meta_data->>'business_name', user_full_name || '''s Pet Care');
-    user_location := COALESCE(NEW.raw_user_meta_data->>'location', NEW.raw_user_meta_data->>'city', 'Bengaluru');
-
-    -- Insert into public.users
-    -- ON CONFLICT DO UPDATE updates name and phone only; role is IMMUTABLE here.
-    INSERT INTO public.users (id, full_name, email, role, phone)
-    VALUES (NEW.id, user_full_name, NEW.email, assigned_role, user_phone)
-    ON CONFLICT (id) DO UPDATE
-    SET full_name = EXCLUDED.full_name,
-        phone = EXCLUDED.phone;
-
-    -- If provider, create unverified provider profile
-    IF assigned_role = 'provider' THEN
-        INSERT INTO public.providers (user_id, business_name, location, description, verified)
-        VALUES (NEW.id, business_title, user_location, 'Dedicated pet wellness specialist offering high quality care.', false)
-        ON CONFLICT (user_id) DO NOTHING;
-    END IF;
+    -- Insert into public.users with resolved safe role
+    INSERT INTO public.users (
+        id,
+        email,
+        full_name,
+        role,
+        avatar_url,
+        phone,
+        created_at
+    ) VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+        assigned_role,
+        COALESCE(NEW.raw_user_meta_data->>'avatar_url', NULL),
+        COALESCE(NEW.raw_user_meta_data->>'phone', NULL),
+        COALESCE(NEW.created_at, now())
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        full_name = CASE 
+            WHEN public.users.full_name IS NULL OR public.users.full_name = '' 
+            THEN EXCLUDED.full_name 
+            ELSE public.users.full_name 
+        END,
+        avatar_url = COALESCE(public.users.avatar_url, EXCLUDED.avatar_url),
+        phone = COALESCE(public.users.phone, EXCLUDED.phone);
 
     RETURN NEW;
 END;
@@ -170,47 +252,28 @@ $function$;
 -- SECTION 3: ROLE ESCALATION & PROVIDER VERIFICATION TRIGGERS
 -- ============================================================================
 
--- Function 3.1: prevent_user_role_escalation()
+-- Function 3.1: prevent_user_role_escalation
 CREATE OR REPLACE FUNCTION public.prevent_user_role_escalation()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
+SET search_path = 'pg_catalog', 'public', 'auth'
 AS $function$
 BEGIN
-    -- INSERT PROTECTION
-    IF TG_OP = 'INSERT' THEN
-        -- Allow internal Auth trigger execution (GoTrue runs as supabase_auth_admin or postgres)
-        IF session_user IN ('postgres', 'supabase_admin', 'supabase_auth_admin') OR auth.role() = 'service_role' THEN
-            RETURN NEW;
-        END IF;
-
-        -- Direct client INSERT: restricted to pet_owner or provider (never admin)
-        IF NEW.role NOT IN ('pet_owner'::public.user_role, 'provider'::public.user_role) THEN
-            IF NOT public.is_admin() THEN
-                RAISE EXCEPTION 'Security Violation: Direct creation of profiles with elevated role (%) is unauthorized.', NEW.role
-                    USING ERRCODE = '42501';
-            END IF;
-        END IF;
-
-        RETURN NEW;
-    END IF;
-
-    -- UPDATE PROTECTION: Only administrators or service_role can modify user roles
-    IF TG_OP = 'UPDATE' THEN
-        IF NEW.role IS DISTINCT FROM OLD.role THEN
-            IF NOT (public.is_admin() OR auth.role() = 'service_role' OR session_user IN ('postgres', 'supabase_admin')) THEN
-                RAISE EXCEPTION 'Security Violation: You are not authorized to modify user roles.'
-                    USING ERRCODE = '42501';
-            END IF;
-        END IF;
-
-        IF NEW.id IS DISTINCT FROM OLD.id THEN
-            RAISE EXCEPTION 'Security Violation: User account ID is immutable.'
+    IF NEW.role IS DISTINCT FROM OLD.role THEN
+        IF NOT public.is_admin() THEN
+            RAISE EXCEPTION 'Security Violation: You are not authorized to modify user roles.'
                 USING ERRCODE = '42501';
         END IF;
+    END IF;
 
-        RETURN NEW;
+    IF NEW.id IS DISTINCT FROM OLD.id THEN
+        RAISE EXCEPTION 'Security Violation: User ID is immutable.'
+            USING ERRCODE = '42501';
+    END IF;
+
+    IF NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+        NEW.created_at := OLD.created_at;
     END IF;
 
     RETURN NEW;
@@ -220,40 +283,42 @@ $function$;
 -- Trigger 3.1: Attach to public.users
 DROP TRIGGER IF EXISTS trg_prevent_user_role_escalation ON public.users;
 CREATE TRIGGER trg_prevent_user_role_escalation
-    BEFORE INSERT OR UPDATE ON public.users
+    BEFORE UPDATE ON public.users
     FOR EACH ROW
     EXECUTE FUNCTION public.prevent_user_role_escalation();
 
--- Function 3.2: prevent_provider_verification_tampering()
+-- Function 3.2: prevent_provider_verification_tampering
 CREATE OR REPLACE FUNCTION public.prevent_provider_verification_tampering()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
+SET search_path = 'pg_catalog', 'public', 'auth'
 AS $function$
 BEGIN
-    -- Only platform admins or service_role can create pre-verified providers
     IF TG_OP = 'INSERT' THEN
         IF NEW.verified IS TRUE THEN
-            IF NOT (public.is_admin() OR auth.role() = 'service_role' OR session_user IN ('postgres', 'supabase_admin')) THEN
-                NEW.verified := FALSE;
+            IF NOT public.is_admin() THEN
+                NEW.verified := false;
             END IF;
         END IF;
         RETURN NEW;
     END IF;
 
-    -- Only platform admins or service_role can alter the verification status
     IF TG_OP = 'UPDATE' THEN
         IF NEW.verified IS DISTINCT FROM OLD.verified THEN
-            IF NOT (public.is_admin() OR auth.role() = 'service_role' OR session_user IN ('postgres', 'supabase_admin')) THEN
+            IF NOT public.is_admin() THEN
                 RAISE EXCEPTION 'Security Violation: Only platform administrators can change provider verification status.'
                     USING ERRCODE = '42501';
             END IF;
         END IF;
 
-        -- Provider user_id cannot be reassigned
+        IF NEW.id IS DISTINCT FROM OLD.id THEN
+            RAISE EXCEPTION 'Security Violation: Provider ID is immutable.'
+                USING ERRCODE = '42501';
+        END IF;
+
         IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
-            RAISE EXCEPTION 'Security Violation: Provider user account link is immutable.'
+            RAISE EXCEPTION 'Security Violation: Provider user_id cannot be reassigned.'
                 USING ERRCODE = '42501';
         END IF;
 
@@ -280,230 +345,183 @@ CREATE OR REPLACE FUNCTION public.validate_booking_transition_and_fields()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
+SET search_path = 'pg_catalog', 'public', 'auth'
 AS $function$
 DECLARE
-    is_owner_party BOOLEAN;
-    is_provider_party BOOLEAN;
-    is_admin_actor BOOLEAN;
-    booking_prov_user_id UUID;
-    v_clean_time TEXT;
-    v_appointment_instant TIMESTAMPTZ;
-    v_current_marketplace_date DATE;
-    v_authoritative_price NUMERIC(10,2);
-    v_service_active BOOLEAN;
-    v_provider_verified BOOLEAN;
+    svc_record RECORD;
+    pet_record RECORD;
+    prov_record RECORD;
+    is_admin_actor boolean;
+    is_owner_party boolean;
+    is_provider_party boolean;
 BEGIN
-    is_admin_actor := public.is_admin() OR auth.role() = 'service_role' OR session_user IN ('postgres', 'supabase_admin');
+    is_admin_actor := public.is_admin();
 
-    -- ========================================================================
-    -- 1. INSERT VALIDATION & PROTECTION (TG_OP = 'INSERT')
-    -- ========================================================================
+    -- ====================================================================
+    -- 1. INSERT VALIDATION
+    -- ====================================================================
     IF TG_OP = 'INSERT' THEN
-        -- Initial Status Authorization
-        IF NOT is_admin_actor THEN
-            IF NEW.status IS DISTINCT FROM 'PENDING'::public.booking_status THEN
-                RAISE EXCEPTION 'Security Violation: New pet owner bookings must be created with PENDING status.'
-                    USING ERRCODE = '42501';
-            END IF;
+        SELECT id, provider_id, price, active INTO svc_record
+        FROM public.services
+        WHERE id = NEW.service_id;
 
-            IF auth.uid() IS NULL OR NEW.user_id IS DISTINCT FROM auth.uid() THEN
-                RAISE EXCEPTION 'Security Violation: Cannot create a booking on behalf of another user account.'
-                    USING ERRCODE = '42501';
-            END IF;
-        ELSE
-            IF NEW.status NOT IN ('PENDING'::public.booking_status, 'CONFIRMED'::public.booking_status) THEN
-                RAISE EXCEPTION 'Security Violation: New bookings cannot be initialized in a terminal state (%). Allowed initial states: PENDING, CONFIRMED.', NEW.status
-                    USING ERRCODE = '42501';
-            END IF;
+        IF svc_record.id IS NULL THEN
+            RAISE EXCEPTION 'Validation Error: Referenced service does not exist.' USING ERRCODE = '23503';
         END IF;
 
-        -- Universal Pet Ownership Verification
-        IF NOT EXISTS (SELECT 1 FROM public.pets WHERE id = NEW.pet_id AND owner_id = NEW.user_id) THEN
-            RAISE EXCEPTION 'Security Violation: The designated pet (%) does not belong to the booking user (%).', NEW.pet_id, NEW.user_id
-                USING ERRCODE = '42501';
+        IF NOT svc_record.active THEN
+            RAISE EXCEPTION 'Validation Error: Referenced service is inactive.' USING ERRCODE = '22023';
         END IF;
 
-        -- Universal Provider Verification Check
-        SELECT verified INTO v_provider_verified
-        FROM public.providers 
+        IF NEW.provider_id <> svc_record.provider_id THEN
+            RAISE EXCEPTION 'Validation Error: Provider ID (%) does not match service provider ID (%).',
+                NEW.provider_id, svc_record.provider_id USING ERRCODE = '22023';
+        END IF;
+
+        IF NEW.total_price IS DISTINCT FROM svc_record.price THEN
+            RAISE EXCEPTION 'Validation Error: Booking total_price (%) does not match catalog price (%).',
+                NEW.total_price, svc_record.price USING ERRCODE = '22023';
+        END IF;
+
+        SELECT id, owner_id INTO pet_record
+        FROM public.pets
+        WHERE id = NEW.pet_id;
+
+        IF pet_record.id IS NULL THEN
+            RAISE EXCEPTION 'Validation Error: Referenced pet does not exist.' USING ERRCODE = '23503';
+        END IF;
+
+        IF pet_record.owner_id <> NEW.user_id THEN
+            RAISE EXCEPTION 'Validation Error: Pet does not belong to booking user.' USING ERRCODE = '22023';
+        END IF;
+
+        SELECT id, verified INTO prov_record
+        FROM public.providers
         WHERE id = NEW.provider_id;
 
-        IF v_provider_verified IS NULL THEN
-            RAISE EXCEPTION 'Validation Error: Designated provider profile does not exist.'
-                USING ERRCODE = '23503';
+        IF prov_record.id IS NULL THEN
+            RAISE EXCEPTION 'Validation Error: Referenced provider does not exist.' USING ERRCODE = '23503';
         END IF;
 
-        IF NOT v_provider_verified THEN
-            RAISE EXCEPTION 'Security Violation: Cannot book appointments with unverified service providers.'
-                USING ERRCODE = '42501';
+        IF NOT prov_record.verified THEN
+            RAISE EXCEPTION 'Validation Error: Cannot create booking for unverified provider.' USING ERRCODE = '22023';
         END IF;
 
-        -- Universal Service Eligibility & Active Status Check
-        SELECT price, active INTO v_authoritative_price, v_service_active
-        FROM public.services 
-        WHERE id = NEW.service_id AND provider_id = NEW.provider_id;
-
-        IF v_authoritative_price IS NULL THEN
-            RAISE EXCEPTION 'Validation Error: The selected service does not belong to the designated provider.'
-                USING ERRCODE = '23503';
-        END IF;
-
-        IF NOT v_service_active THEN
-            RAISE EXCEPTION 'Validation Error: The selected service is currently inactive and cannot receive new bookings.'
-                USING ERRCODE = '23503';
-        END IF;
-
-        -- Universal Authoritative Price Integrity (on creation)
-        IF NEW.total_price IS NULL OR NEW.total_price != v_authoritative_price THEN
-            RAISE EXCEPTION 'Validation Error: Booking total_price (%) does not match the authoritative service catalog price (%).', NEW.total_price, v_authoritative_price
-                USING ERRCODE = '22003';
-        END IF;
-
-        -- Strict time format validation (supports 'HH:MI AM/PM' format)
-        v_clean_time := UPPER(TRIM(NEW.booking_time));
-        IF v_clean_time !~ '^(0[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)$' THEN
-            RAISE EXCEPTION 'Validation Error: Invalid booking_time format "%". Expected format is "HH:MI AM/PM".', NEW.booking_time
-                USING ERRCODE = '22007';
-        END IF;
-
-        -- Timezone-aware date validation (Asia/Kolkata / UTC+05:30)
-        v_current_marketplace_date := (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE;
-
-        IF NEW.booking_date < v_current_marketplace_date THEN
-            RAISE EXCEPTION 'Validation Error: Appointment date cannot be in the past.'
-                USING ERRCODE = '22008';
-        END IF;
-
-        v_appointment_instant := (NEW.booking_date + v_clean_time::time) AT TIME ZONE 'Asia/Kolkata';
-
-        IF NEW.booking_date = v_current_marketplace_date AND v_appointment_instant < NOW() THEN
-            RAISE EXCEPTION 'Validation Error: Appointment time slot has already passed for today.'
-                USING ERRCODE = '22008';
+        IF NEW.status IS NULL THEN
+            NEW.status := 'PENDING'::public.booking_status;
+        ELSIF NEW.status <> 'PENDING'::public.booking_status AND NOT is_admin_actor THEN
+            RAISE EXCEPTION 'Validation Error: New bookings must be created in PENDING status.' USING ERRCODE = '22023';
         END IF;
 
         RETURN NEW;
     END IF;
 
-    -- ========================================================================
-    -- 2. UPDATE VALIDATION & PROTECTION (TG_OP = 'UPDATE')
-    -- ========================================================================
+    -- ====================================================================
+    -- 2. UPDATE VALIDATION
+    -- ====================================================================
     IF TG_OP = 'UPDATE' THEN
-        -- Resolve actor relationships
         is_owner_party := (auth.uid() IS NOT NULL AND auth.uid() = OLD.user_id);
+        is_provider_party := (auth.uid() IS NOT NULL AND EXISTS (
+            SELECT 1 FROM public.providers pr WHERE pr.id = OLD.provider_id AND pr.user_id = auth.uid()
+        ));
 
-        SELECT user_id INTO booking_prov_user_id 
-        FROM public.providers 
-        WHERE id = OLD.provider_id;
-
-        is_provider_party := (auth.uid() IS NOT NULL AND auth.uid() = booking_prov_user_id);
-
-        -- Strict actor authorization guard: Unrelated actors cannot modify bookings
+        -- Strict actor check: Only owner, assigned provider, or admin may update
         IF NOT (is_admin_actor OR is_owner_party OR is_provider_party) THEN
             RAISE EXCEPTION 'Security Violation: You are not authorized to modify this booking.'
                 USING ERRCODE = '42501';
         END IF;
 
-        -- Immutable core identity fields
+        -- Immutable core keys
         IF NEW.id IS DISTINCT FROM OLD.id THEN
             RAISE EXCEPTION 'Security Violation: Booking ID is immutable.' USING ERRCODE = '42501';
         END IF;
 
         IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
-            RAISE EXCEPTION 'Security Violation: Booking customer ID is immutable.' USING ERRCODE = '42501';
+            RAISE EXCEPTION 'Security Violation: Booking user_id is immutable.' USING ERRCODE = '42501';
         END IF;
 
         IF NEW.provider_id IS DISTINCT FROM OLD.provider_id THEN
-            RAISE EXCEPTION 'Security Violation: Booking provider ID is immutable.' USING ERRCODE = '42501';
+            RAISE EXCEPTION 'Security Violation: Booking provider_id is immutable.' USING ERRCODE = '42501';
         END IF;
 
         IF NEW.service_id IS DISTINCT FROM OLD.service_id THEN
-            RAISE EXCEPTION 'Security Violation: Booking service ID is immutable.' USING ERRCODE = '42501';
+            RAISE EXCEPTION 'Security Violation: Booking service_id is immutable.' USING ERRCODE = '42501';
         END IF;
 
         IF NEW.pet_id IS DISTINCT FROM OLD.pet_id THEN
-            RAISE EXCEPTION 'Security Violation: Booking pet ID is immutable.' USING ERRCODE = '42501';
+            RAISE EXCEPTION 'Security Violation: Booking pet_id is immutable.' USING ERRCODE = '42501';
         END IF;
 
-        -- Historical booking price preservation: price is immutable once booked
         IF NEW.total_price IS DISTINCT FROM OLD.total_price THEN
-            RAISE EXCEPTION 'Security Violation: Booking total price is immutable once booked.' USING ERRCODE = '42501';
-        END IF;
-
-        -- Appointment Rescheduling Authorization (Date / Time)
-        IF NEW.booking_date IS DISTINCT FROM OLD.booking_date OR NEW.booking_time IS DISTINCT FROM OLD.booking_time THEN
-            IF NOT (is_owner_party OR is_provider_party OR is_admin_actor) THEN
-                RAISE EXCEPTION 'Security Violation: You are not authorized to reschedule this booking.' USING ERRCODE = '42501';
-            END IF;
-
-            IF OLD.status IS DISTINCT FROM 'PENDING'::public.booking_status AND NOT is_admin_actor THEN
-                RAISE EXCEPTION 'Security Violation: Booking appointment date and time can only be modified while status is PENDING.' USING ERRCODE = '42501';
-            END IF;
-
-            v_clean_time := UPPER(TRIM(NEW.booking_time));
-            IF v_clean_time !~ '^(0[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM)$' THEN
-                RAISE EXCEPTION 'Validation Error: Invalid booking_time format "%". Expected format is "HH:MI AM/PM".', NEW.booking_time USING ERRCODE = '22007';
-            END IF;
-
-            v_current_marketplace_date := (NOW() AT TIME ZONE 'Asia/Kolkata')::DATE;
-
-            IF NEW.booking_date < v_current_marketplace_date THEN
-                RAISE EXCEPTION 'Security Violation: Booking appointment date cannot be set in the past.' USING ERRCODE = '42501';
-            END IF;
-
-            v_appointment_instant := (NEW.booking_date + v_clean_time::time) AT TIME ZONE 'Asia/Kolkata';
-
-            IF NEW.booking_date = v_current_marketplace_date AND v_appointment_instant < NOW() THEN
-                RAISE EXCEPTION 'Security Violation: Booking appointment time (%) for today has already passed.', NEW.booking_time USING ERRCODE = '42501';
+            IF NOT is_admin_actor THEN
+                RAISE EXCEPTION 'Security Violation: Booking total_price is immutable once created.'
+                    USING ERRCODE = '42501';
             END IF;
         END IF;
 
-        -- Booking Notes Authorization
-        IF NEW.booking_notes IS DISTINCT FROM OLD.booking_notes THEN
-            IF NOT (is_owner_party OR is_admin_actor) THEN
-                RAISE EXCEPTION 'Security Violation: Only the pet owner can modify booking notes.' USING ERRCODE = '42501';
+        -- Rescheduling appointment
+        IF (NEW.booking_date IS DISTINCT FROM OLD.booking_date) OR 
+           (NEW.booking_time IS DISTINCT FROM OLD.booking_time) THEN
+            IF OLD.status <> 'PENDING'::public.booking_status AND NOT is_admin_actor THEN
+                RAISE EXCEPTION 'Validation Error: Rescheduling is only permitted while booking is in PENDING status.'
+                    USING ERRCODE = '22023';
             END IF;
         END IF;
 
-        -- Status Transition Matrix Authorization (ZERO fall-through)
+        -- Status transition state machine
         IF NEW.status IS DISTINCT FROM OLD.status THEN
-            -- Universal terminal state check
-            IF OLD.status IN ('COMPLETED', 'CANCELLED', 'REJECTED') THEN
-                RAISE EXCEPTION 'Security Violation: Cannot transition booking out of terminal state %.', OLD.status USING ERRCODE = '42501';
+            -- Terminal state protection
+            IF OLD.status IN ('COMPLETED'::public.booking_status, 'CANCELLED'::public.booking_status) THEN
+                IF NOT is_admin_actor THEN
+                    RAISE EXCEPTION 'Security Violation: Cannot transition booking out of terminal state %.', OLD.status
+                        USING ERRCODE = '42501';
+                END IF;
             END IF;
 
-            IF is_admin_actor THEN
-                IF OLD.status = 'PENDING' AND NEW.status IN ('CONFIRMED', 'CANCELLED', 'REJECTED', 'COMPLETED') THEN
-                    RETURN NEW;
-                ELSIF OLD.status = 'CONFIRMED' AND NEW.status IN ('COMPLETED', 'CANCELLED', 'REJECTED') THEN
-                    RETURN NEW;
+            -- PENDING transitions
+            IF OLD.status = 'PENDING'::public.booking_status THEN
+                IF NEW.status = 'CONFIRMED'::public.booking_status THEN
+                    IF NOT (is_provider_party OR is_admin_actor) THEN
+                        RAISE EXCEPTION 'Security Violation: Only the assigned provider or admin can confirm a booking.'
+                            USING ERRCODE = '42501';
+                    END IF;
+                ELSIF NEW.status = 'CANCELLED'::public.booking_status THEN
+                    IF NOT (is_owner_party OR is_provider_party OR is_admin_actor) THEN
+                        RAISE EXCEPTION 'Security Violation: Only involved parties or admin can cancel a booking.'
+                            USING ERRCODE = '42501';
+                    END IF;
                 ELSE
-                    RAISE EXCEPTION 'Security Violation: Invalid administrative status transition from % to %.', OLD.status, NEW.status USING ERRCODE = '42501';
+                    IF NOT is_admin_actor THEN
+                        RAISE EXCEPTION 'Security Violation: Invalid status transition from PENDING to %.', NEW.status
+                            USING ERRCODE = '42501';
+                    END IF;
                 END IF;
-            ELSIF is_owner_party AND is_provider_party THEN
-                IF OLD.status = 'PENDING' AND NEW.status IN ('CONFIRMED', 'CANCELLED', 'REJECTED') THEN
-                    RETURN NEW;
-                ELSIF OLD.status = 'CONFIRMED' AND NEW.status IN ('COMPLETED', 'CANCELLED') THEN
-                    RETURN NEW;
+
+            -- CONFIRMED transitions
+            ELSIF OLD.status = 'CONFIRMED'::public.booking_status THEN
+                IF NEW.status = 'COMPLETED'::public.booking_status THEN
+                    IF NOT (is_provider_party OR is_admin_actor) THEN
+                        RAISE EXCEPTION 'Security Violation: Only the assigned provider or admin can complete a booking.'
+                            USING ERRCODE = '42501';
+                    END IF;
+                ELSIF NEW.status = 'CANCELLED'::public.booking_status THEN
+                    IF NOT (is_owner_party OR is_provider_party OR is_admin_actor) THEN
+                        RAISE EXCEPTION 'Security Violation: Only involved parties or admin can cancel a confirmed booking.'
+                            USING ERRCODE = '42501';
+                    END IF;
                 ELSE
-                    RAISE EXCEPTION 'Security Violation: Invalid dual-party transition from % to %.', OLD.status, NEW.status USING ERRCODE = '42501';
+                    IF NOT is_admin_actor THEN
+                        RAISE EXCEPTION 'Security Violation: Invalid status transition from CONFIRMED to %.', NEW.status
+                            USING ERRCODE = '42501';
+                    END IF;
                 END IF;
-            ELSIF is_owner_party THEN
-                IF OLD.status IN ('PENDING', 'CONFIRMED') AND NEW.status = 'CANCELLED' THEN
-                    RETURN NEW;
-                ELSE
-                    RAISE EXCEPTION 'Security Violation: Pet owners can only cancel active bookings (attempted transition from % to %).', OLD.status, NEW.status USING ERRCODE = '42501';
-                END IF;
-            ELSIF is_provider_party THEN
-                IF OLD.status = 'PENDING' AND NEW.status IN ('CONFIRMED', 'REJECTED') THEN
-                    RETURN NEW;
-                ELSIF OLD.status = 'CONFIRMED' AND NEW.status IN ('COMPLETED', 'CANCELLED') THEN
-                    RETURN NEW;
-                ELSE
-                    RAISE EXCEPTION 'Security Violation: Providers cannot transition booking from % to %.', OLD.status, NEW.status USING ERRCODE = '42501';
-                END IF;
+
+            -- Fall-through
             ELSE
-                RAISE EXCEPTION 'Security Violation: You are not authorized to change the status of this booking.' USING ERRCODE = '42501';
+                IF NOT is_admin_actor THEN
+                    RAISE EXCEPTION 'Security Violation: Invalid status transition from % to %.', OLD.status, NEW.status
+                        USING ERRCODE = '42501';
+                END IF;
             END IF;
         END IF;
 
@@ -515,8 +533,8 @@ END;
 $function$;
 
 -- Trigger 4.1: Attach to public.bookings
-DROP TRIGGER IF EXISTS trg_validate_booking_transition ON public.bookings;
-CREATE TRIGGER trg_validate_booking_transition
+DROP TRIGGER IF EXISTS trg_validate_booking_transition_and_fields ON public.bookings;
+CREATE TRIGGER trg_validate_booking_transition_and_fields
     BEFORE INSERT OR UPDATE ON public.bookings
     FOR EACH ROW
     EXECUTE FUNCTION public.validate_booking_transition_and_fields();
@@ -530,72 +548,65 @@ CREATE OR REPLACE FUNCTION public.validate_review_integrity()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'auth'
+SET search_path = 'pg_catalog', 'public', 'auth'
 AS $function$
 DECLARE
-    is_admin_actor BOOLEAN;
-    v_booking_user_id UUID;
-    v_booking_provider_id UUID;
-    v_booking_service_id UUID;
-    v_booking_status public.booking_status;
+    booking_record RECORD;
+    is_admin_actor boolean;
 BEGIN
-    is_admin_actor := public.is_admin() OR auth.role() = 'service_role' OR session_user IN ('postgres', 'supabase_admin');
+    is_admin_actor := public.is_admin();
 
     -- ====================================================================
     -- 1. INSERT VALIDATION
     -- ====================================================================
     IF TG_OP = 'INSERT' THEN
         IF NOT is_admin_actor THEN
-            IF auth.uid() IS NULL OR NEW.user_id IS DISTINCT FROM auth.uid() THEN
-                RAISE EXCEPTION 'Security Violation: Review user_id must match the authenticated user.'
+            IF auth.uid() IS NULL OR auth.uid() IS DISTINCT FROM NEW.user_id THEN
+                RAISE EXCEPTION 'Security Violation: Review author user_id must match authenticated caller.'
                     USING ERRCODE = '42501';
             END IF;
         END IF;
 
-        -- Require valid booking reference
-        IF NEW.booking_id IS NULL THEN
-            RAISE EXCEPTION 'Validation Error: Review must be linked to a valid appointment booking.'
-                USING ERRCODE = '23502';
+        -- Validate booking linkage
+        IF NEW.booking_id IS NOT NULL THEN
+            SELECT id, user_id, provider_id, service_id, status INTO booking_record
+            FROM public.bookings
+            WHERE id = NEW.booking_id;
+
+            IF booking_record.id IS NULL THEN
+                RAISE EXCEPTION 'Validation Error: Referenced booking does not exist.' USING ERRCODE = '23503';
+            END IF;
+
+            IF booking_record.status <> 'COMPLETED'::public.booking_status THEN
+                RAISE EXCEPTION 'Validation Error: Reviews can only be submitted for COMPLETED bookings (current status: %).',
+                    booking_record.status USING ERRCODE = '22023';
+            END IF;
+
+            IF booking_record.user_id <> NEW.user_id THEN
+                RAISE EXCEPTION 'Validation Error: Review author does not match booking owner.' USING ERRCODE = '42501';
+            END IF;
+
+            IF booking_record.provider_id <> NEW.provider_id THEN
+                RAISE EXCEPTION 'Validation Error: Review provider_id does not match booking provider_id.' USING ERRCODE = '22023';
+            END IF;
+
+            IF NEW.service_id IS NOT NULL AND booking_record.service_id <> NEW.service_id THEN
+                RAISE EXCEPTION 'Validation Error: Review service_id does not match booking service_id.' USING ERRCODE = '22023';
+            END IF;
+
+            IF NEW.service_id IS NULL THEN
+                NEW.service_id := booking_record.service_id;
+            END IF;
+        ELSE
+            IF NOT is_admin_actor THEN
+                RAISE EXCEPTION 'Validation Error: A verified booking_id is required to submit a customer review.'
+                    USING ERRCODE = '22023';
+            END IF;
         END IF;
 
-        -- Verify booking exists, is COMPLETED, and matches user_id and provider_id
-        SELECT user_id, provider_id, service_id, status 
-        INTO v_booking_user_id, v_booking_provider_id, v_booking_service_id, v_booking_status
-        FROM public.bookings
-        WHERE id = NEW.booking_id;
-
-        IF v_booking_status IS NULL THEN
-            RAISE EXCEPTION 'Validation Error: Referenced booking does not exist.'
-                USING ERRCODE = '23503';
-        END IF;
-
-        IF v_booking_status IS DISTINCT FROM 'COMPLETED'::public.booking_status THEN
-            RAISE EXCEPTION 'Security Violation: Reviews can only be submitted for COMPLETED bookings (current status: %).', v_booking_status
-                USING ERRCODE = '42501';
-        END IF;
-
-        IF v_booking_user_id IS DISTINCT FROM NEW.user_id THEN
-            RAISE EXCEPTION 'Security Violation: The booking does not belong to the review author.'
-                USING ERRCODE = '42501';
-        END IF;
-
-        IF v_booking_provider_id IS DISTINCT FROM NEW.provider_id THEN
-            RAISE EXCEPTION 'Security Violation: The designated provider does not match the booking provider.'
-                USING ERRCODE = '42501';
-        END IF;
-
-        -- Sync or validate service_id
-        IF NEW.service_id IS NULL THEN
-            NEW.service_id := v_booking_service_id;
-        ELSIF NEW.service_id IS DISTINCT FROM v_booking_service_id THEN
-            RAISE EXCEPTION 'Security Violation: The designated service does not match the booking service.'
-                USING ERRCODE = '42501';
-        END IF;
-
-        -- Validate rating range
+        -- Validate rating
         IF NEW.rating IS NULL OR NEW.rating < 1 OR NEW.rating > 5 THEN
-            RAISE EXCEPTION 'Validation Error: Review rating must be an integer between 1 and 5.'
-                USING ERRCODE = '22003';
+            RAISE EXCEPTION 'Validation Error: Review rating must be an integer between 1 and 5.' USING ERRCODE = '22003';
         END IF;
 
         RETURN NEW;
@@ -626,7 +637,6 @@ BEGIN
             RAISE EXCEPTION 'Security Violation: Review service_id is immutable.' USING ERRCODE = '42501';
         END IF;
 
-        -- Validate actor authorization: only the author or an admin can update the review
         IF NOT is_admin_actor THEN
             IF auth.uid() IS NULL OR auth.uid() IS DISTINCT FROM OLD.user_id THEN
                 RAISE EXCEPTION 'Security Violation: You are not authorized to update this review.'
@@ -634,10 +644,8 @@ BEGIN
             END IF;
         END IF;
 
-        -- Validate rating range
         IF NEW.rating IS NULL OR NEW.rating < 1 OR NEW.rating > 5 THEN
-            RAISE EXCEPTION 'Validation Error: Review rating must be an integer between 1 and 5.'
-                USING ERRCODE = '22003';
+            RAISE EXCEPTION 'Validation Error: Review rating must be an integer between 1 and 5.' USING ERRCODE = '22003';
         END IF;
 
         RETURN NEW;
@@ -660,7 +668,7 @@ CREATE TRIGGER trg_validate_review_integrity
 -- ============================================================================
 
 -- View 6.1: Create public.provider_public_profiles view
--- Exposes ONLY non-sensitive fields; excludes user_id, email, phone, internal timestamps.
+-- Exposes ONLY 9 non-sensitive columns; excludes user_id, email, phone, timestamps.
 CREATE OR REPLACE VIEW public.provider_public_profiles
 WITH (security_invoker = false)
 AS
@@ -682,12 +690,15 @@ WHERE pr.verified = true;
 GRANT SELECT ON public.provider_public_profiles TO anon, authenticated;
 
 -- Hardened RLS on public.providers
+-- Explicitly drop ALL prior policy variants across Production and Staging
 DROP POLICY IF EXISTS "Public can view providers" ON public.providers;
 DROP POLICY IF EXISTS "Provider can insert own profile" ON public.providers;
 DROP POLICY IF EXISTS "Provider can update own profile" ON public.providers;
+DROP POLICY IF EXISTS "Admin full control on providers" ON public.providers;
 DROP POLICY IF EXISTS "Providers view own profile and admins" ON public.providers;
 DROP POLICY IF EXISTS "Providers can register business profile" ON public.providers;
 DROP POLICY IF EXISTS "Providers can update own business profile" ON public.providers;
+DROP POLICY IF EXISTS "Admins can delete provider records" ON public.providers;
 
 CREATE POLICY "Providers view own profile and admins"
     ON public.providers FOR SELECT
@@ -702,15 +713,23 @@ CREATE POLICY "Providers can update own business profile"
     USING ((auth.uid() = user_id) OR public.is_admin())
     WITH CHECK ((auth.uid() = user_id) OR public.is_admin());
 
+CREATE POLICY "Admins can delete provider records"
+    ON public.providers FOR DELETE
+    USING (public.is_admin());
+
 
 -- ============================================================================
 -- SECTION 7: PUBLIC.USERS RLS HARDENING (PRIVACY ENFORCEMENT)
 -- ============================================================================
 
+-- Explicitly drop ALL prior policy variants across Production and Staging
 DROP POLICY IF EXISTS "Public users profile read" ON public.users;
+DROP POLICY IF EXISTS "Admin full control on users" ON public.users;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
 DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
 DROP POLICY IF EXISTS "Admins can view all user profiles" ON public.users;
+DROP POLICY IF EXISTS "Admins can insert user profiles" ON public.users;
+DROP POLICY IF EXISTS "Admins can delete user profiles" ON public.users;
 
 CREATE POLICY "Users can view own profile"
     ON public.users FOR SELECT
@@ -725,15 +744,32 @@ CREATE POLICY "Users can update own profile"
     USING ((auth.uid() = id) OR public.is_admin())
     WITH CHECK ((auth.uid() = id) OR public.is_admin());
 
+CREATE POLICY "Admins can insert user profiles"
+    ON public.users FOR INSERT
+    WITH CHECK (public.is_admin());
+
+CREATE POLICY "Admins can delete user profiles"
+    ON public.users FOR DELETE
+    USING (public.is_admin());
+
 
 -- ============================================================================
 -- SECTION 8: PUBLIC.REVIEWS RLS HARDENING
 -- ============================================================================
 
+-- Explicitly drop ALL prior policy variants across Production and Staging
+DROP POLICY IF EXISTS "Public can view reviews" ON public.reviews;
 DROP POLICY IF EXISTS "Users can insert reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Admin full control on reviews" ON public.reviews;
+DROP POLICY IF EXISTS "Reviews are viewable by everyone" ON public.reviews;
 DROP POLICY IF EXISTS "Authenticated users can submit reviews for completed bookings" ON public.reviews;
 DROP POLICY IF EXISTS "Authors can update own reviews" ON public.reviews;
 DROP POLICY IF EXISTS "Authors and admins can delete reviews" ON public.reviews;
+
+-- Preserves intended public read of customer reviews
+CREATE POLICY "Reviews are viewable by everyone"
+    ON public.reviews FOR SELECT
+    USING (true);
 
 CREATE POLICY "Authenticated users can submit reviews for completed bookings"
     ON public.reviews FOR INSERT
@@ -762,7 +798,7 @@ CREATE POLICY "Authors and admins can delete reviews"
 
 
 -- ============================================================================
--- SECTION 9: STORAGE BUCKET CONFIGURATION & VERIFIED PROVIDER POLICIES
+-- SECTION 9: STORAGE BUCKET CONFIGURATION & POLICIES
 -- ============================================================================
 
 -- 1. Configure 5MB size limit and image MIME-types on all three buckets
@@ -771,28 +807,50 @@ SET file_size_limit = 5242880,
     allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 WHERE id IN ('pet-images', 'provider-images', 'service-images');
 
--- 2. Drop only the 9 targeted mutating storage policies (preserves Public Read CDN policies)
+-- 2. Explicitly drop ALL 12 Production policies AND ALL 12 Staging policies on storage.objects
+DROP POLICY IF EXISTS "Public can view pet images" ON storage.objects;
+DROP POLICY IF EXISTS "Public can view provider images" ON storage.objects;
+DROP POLICY IF EXISTS "Public can view service images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Read pet-images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Read provider-images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Read service-images" ON storage.objects;
+
 DROP POLICY IF EXISTS "Authenticated users upload pet images" ON storage.objects;
-DROP POLICY IF EXISTS "Providers can upload provider images" ON storage.objects;
-DROP POLICY IF EXISTS "Providers can upload service images" ON storage.objects;
 DROP POLICY IF EXISTS "Users can update their pet images" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete their pet images" ON storage.objects;
-DROP POLICY IF EXISTS "Providers can update own provider images" ON storage.objects;
-DROP POLICY IF EXISTS "Providers can delete own provider images" ON storage.objects;
-DROP POLICY IF EXISTS "Providers can update own service images" ON storage.objects;
-DROP POLICY IF EXISTS "Providers can delete own service images" ON storage.objects;
 DROP POLICY IF EXISTS "Users upload own pet images" ON storage.objects;
 DROP POLICY IF EXISTS "Users update own pet images" ON storage.objects;
 DROP POLICY IF EXISTS "Users delete own pet images" ON storage.objects;
+
+DROP POLICY IF EXISTS "Providers can upload provider images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers can update own provider images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers can delete own provider images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers upload own provider images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers update own provider images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers delete own provider images" ON storage.objects;
+
+DROP POLICY IF EXISTS "Providers can upload service images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers can update own service images" ON storage.objects;
+DROP POLICY IF EXISTS "Providers can delete own service images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers upload service images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers update service images" ON storage.objects;
 DROP POLICY IF EXISTS "Providers delete service images" ON storage.objects;
 
--- 3. Create hardened storage policies
--- pet-images: Authenticated user must own the top-level folder
+-- 3. Create standardized, hardened policies
+-- A. Public CDN Read Policies (3 buckets)
+CREATE POLICY "Public Read pet-images"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'pet-images');
+
+CREATE POLICY "Public Read provider-images"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'provider-images');
+
+CREATE POLICY "Public Read service-images"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'service-images');
+
+-- B. pet-images: Authenticated user must own the top-level folder
 CREATE POLICY "Users upload own pet images"
     ON storage.objects FOR INSERT
     WITH CHECK (
@@ -820,7 +878,7 @@ CREATE POLICY "Users delete own pet images"
         )
     );
 
--- provider-images: Must be VERIFIED provider AND own top-level folder
+-- C. provider-images: Must be VERIFIED provider AND own top-level folder
 CREATE POLICY "Providers upload own provider images"
     ON storage.objects FOR INSERT
     WITH CHECK (
@@ -848,7 +906,7 @@ CREATE POLICY "Providers delete own provider images"
         )
     );
 
--- service-images: Must be VERIFIED provider AND own top-level folder
+-- D. service-images: Must be VERIFIED provider AND own top-level folder
 CREATE POLICY "Providers upload service images"
     ON storage.objects FOR INSERT
     WITH CHECK (
@@ -878,7 +936,7 @@ CREATE POLICY "Providers delete service images"
 
 
 -- ============================================================================
--- SECTION 10: INTEGRITY CONSTRAINTS & INDEXES
+-- SECTION 10: INTEGRITY CONSTRAINTS & AVAILABILITY OVERLAP PREVENTION
 -- ============================================================================
 
 -- 1. Availability start_time < end_time check constraint
@@ -888,13 +946,71 @@ ALTER TABLE public.availability
     ADD CONSTRAINT chk_availability_times_valid 
     CHECK (start_time < end_time);
 
--- 2. Availability unique provider slot composite index
+-- 2. Availability overlapping range exclusion constraint
+-- Uses GiST indexing with btree_gist to enforce non-overlapping time ranges
+-- for the same provider on the same date.
+ALTER TABLE public.availability 
+    DROP CONSTRAINT IF EXISTS chk_availability_no_overlap;
+ALTER TABLE public.availability 
+    ADD CONSTRAINT chk_availability_no_overlap
+    EXCLUDE USING gist (
+        provider_id WITH =,
+        date WITH =,
+        tsrange((date + start_time), (date + end_time), '[)'::text) WITH &&
+    );
+
+-- 3. Availability unique provider slot composite index (exact duplicate lookups)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_availability_provider_slot_unique 
     ON public.availability USING btree (provider_id, date, start_time, end_time);
 
--- 3. Review unique booking partial index
+-- 4. Review unique booking partial index
 CREATE UNIQUE INDEX IF NOT EXISTS uq_reviews_booking_id 
     ON public.reviews USING btree (booking_id) 
     WHERE (booking_id IS NOT NULL);
+
+
+-- ============================================================================
+-- SECTION 11: POST-MIGRATION INTEGRITY SANITY CHECKS
+-- ============================================================================
+DO $$
+DECLARE
+    leaked_user_policies int;
+    leaked_provider_policies int;
+    unverified_storage_policies int;
+    overlap_constraint_exists boolean;
+BEGIN
+    -- Assert zero public/anon readable policies on users
+    SELECT count(*) INTO leaked_user_policies
+    FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'users'
+      AND cmd = 'SELECT' AND qual = 'true';
+
+    IF leaked_user_policies > 0 THEN
+        RAISE EXCEPTION 'POST-CHECK FAILED: Leaked permissive SELECT policy found on public.users!';
+    END IF;
+
+    -- Assert zero public/anon readable policies on providers
+    SELECT count(*) INTO leaked_provider_policies
+    FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'providers'
+      AND cmd = 'SELECT' AND qual = 'true';
+
+    IF leaked_provider_policies > 0 THEN
+        RAISE EXCEPTION 'POST-CHECK FAILED: Leaked permissive SELECT policy found on public.providers!';
+    END IF;
+
+    -- Assert overlap exclusion constraint exists
+    SELECT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_availability_no_overlap'
+          AND conrelid = 'public.availability'::regclass
+    ) INTO overlap_constraint_exists;
+
+    IF NOT overlap_constraint_exists THEN
+        RAISE EXCEPTION 'POST-CHECK FAILED: Availability overlap exclusion constraint chk_availability_no_overlap is missing!';
+    END IF;
+
+    RAISE NOTICE 'POST-MIGRATION SANITY CHECKS PASSED: Zero permissive leaks, overlap exclusion constraint verified.';
+END $$;
 
 COMMIT;
