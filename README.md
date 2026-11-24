@@ -157,7 +157,7 @@ The navigation bar features an **Instant Role Switcher Banner** at the top, allo
 | :--- | :--- | :--- | :--- |
 | **Pet Owner** | `priya.petowner@example.com` | `Password123!` | Pet profiles, book services, view bookings, AI triage |
 | **Service Provider** | `aarav.vet@example.com` | `Password123!` | Accept/reject appointments, add services, view revenue |
-| **Administrator** | `admin@petcare.org` | `Password123!` | Verify providers, monitor all bookings, catalog hygiene |
+| **Administrator** | `ananya03052006@gmail.com` | `Password123!` | Verify providers, monitor all bookings, catalog hygiene |
 
 ---
 

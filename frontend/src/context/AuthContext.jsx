@@ -181,11 +181,11 @@ export const AuthProvider = ({ children }) => {
 
     // Offline / Demo Evaluation Fallback only if Supabase credentials are not configured
     let mockUser;
-    if (requestedRole === 'ADMIN' || email.includes('admin')) {
+    if (requestedRole === 'ADMIN' || email.includes('admin') || email.toLowerCase() === 'ananya03052006@gmail.com') {
       mockUser = {
         id: 'admin-user-1',
         name: 'System Administrator',
-        email: email || 'admin@petcare.org',
+        email: email || 'ananya03052006@gmail.com',
         role: 'ADMIN',
         city: 'Bengaluru',
         avatar: '/images/testimonials/user-arun.jpg',

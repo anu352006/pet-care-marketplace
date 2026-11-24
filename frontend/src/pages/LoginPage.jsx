@@ -50,7 +50,7 @@ const LoginPage = () => {
     } else if (demoRole === 'SERVICE_PROVIDER') {
       setEmail('aarav.vet@example.com');
     } else {
-      setEmail('admin@petcare.org');
+      setEmail('ananya03052006@gmail.com');
     }
   };
 
